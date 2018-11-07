@@ -1,0 +1,20 @@
+CIS 198 Final Project Proposal
+
+We’re planning on creating an app to visualize music. The idea is that you launch a window, select an audio file (such a .wav file), and then render abstract graphics that somehow reflect the song that’s currently playing. We will be relying on the concurrency and performance that Rust provides to ensure our components integrate seamlessly and provide synchronized content and responsiveness for the user experience. 
+
+Here are the major subcomponents (each person will be responsible for one):
+
+Windowing and GUI:
+First, we need a way to launch a window. We’re looking into using an existing library for cross-platform windowing, such as https://github.com/gfx-rs/gfx. We’ll also need to create some simple GUI to allow the user to select an audio file from their file system.
+
+Audio:
+We also intend to find an existing Rust library that handles reading and streaming audio files. Once the user selects a file, our app will play back the audio while also streaming the raw audio samples to the graphics system so that it can update the display. We may also allow the user to play and pause the song.
+We might use the FMOD Rust bindings: https://github.com/GuillaumeGomez/rust-fmod
+
+Graphics
+As the audio is playing, the graphics component will be sent the current audio samples. Then, we’ll attempt to find the current frequencies of the song and its current loudness. Using these, we’ll adjust what shapes are rendered. We may use some Rust OpenGL bindings to do this, and perhaps find a library for signal analysis to compute the fourier transform of the audio signal (along with any other properties of the audio we can extract that may be interesting).
+
+Possible extensions:
+Allow the user to select from a list of different visualizations based on different features of the audio
+Store a list of recently played songs
+
