@@ -9,9 +9,7 @@ pub struct GraphicsState {
 
 /*
    TODO:
-   Cleanup in destructor.
-   Use the gl-rs custom binding generator, the current one
-   doesn't even load the VAO functions
+   Cleanup OpenGL state in destructor.
 */
 impl GraphicsState {
 
@@ -28,36 +26,32 @@ impl GraphicsState {
 
         gl_log_version_info();
 
-        // setup debugging
-        gl::Enable(gl::DEBUG_OUTPUT);
-        // TODO: this func isn't loaded
-        //gl::DebugMessageCallback(handle_gl_debug_message, ptr::null());
+        let mut vao: GLuint = 0;
+        gl::GenVertexArrays(1, &mut vao);
+        gl::BindVertexArray(vao);
 
         self.program = GraphicsState::create_program();
-
-        // TODO: this func isn't loaded
-        //let mut vao: GLuint = 0;
-        //gl::CreateVertexArrays(1, &mut vao);
-        //gl::BindVertexArray(vao);
+        
+        log_gl_errors("setup_gl");
     }
 
     unsafe fn create_program() -> GLuint {
-        let vertex_shader_src = r#"
-        #version 450 core
+        let vertex_shader_src: &[u8] = b"
+        #version 400
 
         void main() {
             gl_Position = vec4(0.0, 0.0, 0.5, 1.0);
         }
-        \0"#;
-        let fragment_shader_src = r#"
-        #version 450 core
+        \0";
+        let fragment_shader_src: &[u8] = b"
+        #version 400
 
-        out vec4 color;
+        out vec4 frag_color;
 
         void main() {
-            color = vec4(0.0, 1.0, 0.0, 1.0);
+            frag_color = vec4(0.0, 1.0, 0.0, 1.0);
         }
-        \0"#;
+        \0";
         let vertex_shader = gl::CreateShader(gl::VERTEX_SHADER);
         gl::ShaderSource(vertex_shader, 1, &(vertex_shader_src.as_ptr() as *const _),
             ptr::null());
@@ -70,9 +64,16 @@ impl GraphicsState {
         gl::AttachShader(program, vertex_shader);
         gl::AttachShader(program, fragment_shader);
         gl::LinkProgram(program);
+        gl::ValidateProgram(program);
+
+        log_shader_info_logs("vertex shader log", vertex_shader);
+        log_shader_info_logs("frag shader log", fragment_shader);
+        log_program_info_logs("program log", program);
 
         gl::DeleteShader(vertex_shader);
         gl::DeleteShader(fragment_shader);
+
+        log_gl_errors("create program");
 
         program
     }
@@ -83,24 +84,54 @@ impl GraphicsState {
             gl::Clear(gl::COLOR_BUFFER_BIT);
 
             gl::UseProgram(self.program);
-            //gl::DrawArrays(gl::TRIANGLES, 0, 3);
             gl::PointSize(40.0);
             gl::DrawArrays(gl::POINTS, 0, 1);
+            //gl::DrawArrays(gl::TRIANGLES, 0, 3);
+            log_gl_errors("draw frame");
         }
     }
 }
 
-extern "system" fn handle_gl_debug_message(
-    source: GLenum, msg_type: GLenum, id: GLuint, severity: GLenum,
-                        length: GLsizei, message: *const GLchar,
-                        user: *mut ffi::c_void) {
-    println!("handling debug message!");
+fn log_program_info_logs(msg: &str, program: GLuint) {
+    unsafe {
+        let mut log_len: GLint = 0;
+        gl::GetProgramiv(program, gl::INFO_LOG_LENGTH, &mut log_len);
+        if log_len > 0 {
+            let mut log_bytes: Vec<i8> = vec![0, log_len as i8];
+            let mut bytes_written: GLsizei = 0;
+            gl::GetProgramInfoLog(program, log_len as GLsizei,
+                                  &mut bytes_written, log_bytes.as_mut_ptr());
+            let c_str = ffi::CStr::from_ptr(log_bytes.as_ptr());
+            println!("{}:\n{}", msg, c_str.to_str().unwrap());
+        }
+    }
 }
 
-fn log_gl_errors() {
+fn log_shader_info_logs(msg: &str, shader: GLuint) {
+    unsafe {
+        let mut log_len: GLint = 0;
+        gl::GetShaderiv(shader, gl::INFO_LOG_LENGTH, &mut log_len);
+        if log_len > 0 {
+            let mut log_bytes: Vec<i8> = vec![0, log_len as i8];
+            let mut bytes_written: GLsizei = 0;
+            gl::GetShaderInfoLog(shader, log_len as GLsizei,
+                                  &mut bytes_written, log_bytes.as_mut_ptr());
+            let c_str = ffi::CStr::from_ptr(log_bytes.as_ptr());
+            println!("{}:\n{}", msg, c_str.to_str().unwrap());
+        }
+    }
+}
+fn log_gl_errors(msg: &str) {
+    if let Some(err) = get_gl_error() {
+        println!("GL error: {:?}, {:?}", msg, err);
+        assert!(false);
+    }
+}
+
+fn get_gl_error() -> Option<String> {
     unsafe {
         let error_code: GLenum = gl::GetError();
-        let error_str: Option<&str> = match error_code {
+        let error_str = match error_code {
             gl::NO_ERROR => None,
             gl::INVALID_ENUM => Some("INVALID_ENUM"),
             gl::INVALID_VALUE => Some("INVALID_VALUE"),
@@ -111,17 +142,12 @@ fn log_gl_errors() {
             gl::STACK_OVERFLOW => Some("STACK_OVERFLOW"),
             _ => Some("unknown error")
         };
-        if let Some(s) = error_str {
-            println!("gl error: {:?}", s);
+        match error_str {
+            Some(e) => Some(String::from(e)),
+            None => None
         }
     }
 }
-
-/*
-fn ptr_to_str(raw_ptr: *const u8) -> String {
-    ffi::CStr::from_ptr(raw_ptr).to_str()
-}
-*/
 
 fn get_gl_str(str_enum: GLenum) -> &'static str {
     unsafe {
@@ -132,13 +158,11 @@ fn get_gl_str(str_enum: GLenum) -> &'static str {
 }
 
 fn gl_log_version_info() {
-    unsafe {
-        let vendor = get_gl_str(gl::VENDOR);
-        let renderer = get_gl_str(gl::RENDERER);
-        let version = get_gl_str(gl::VERSION);
-        let glsl_version = get_gl_str(gl::SHADING_LANGUAGE_VERSION);
-        println!("Vender: {:?}\nRenderer: {:?}\nversion: {:?}\nGLSL version: {:?}",
-                 vendor, renderer, version, glsl_version);
-    }
+    let vendor = get_gl_str(gl::VENDOR);
+    let renderer = get_gl_str(gl::RENDERER);
+    let version = get_gl_str(gl::VERSION);
+    let glsl_version = get_gl_str(gl::SHADING_LANGUAGE_VERSION);
+    println!("Vender: {:?}\nRenderer: {:?}\nversion: {:?}\nGLSL version: {:?}",
+             vendor, renderer, version, glsl_version);
 }
 
