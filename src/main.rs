@@ -3,6 +3,7 @@ extern crate gl;
 
 mod graphics;
 
+use graphics::*;
 use glutin::*;
 
 fn main() {
@@ -13,7 +14,7 @@ fn main() {
     // TODO see past project for proper setup on a mac
     let context = ContextBuilder::new()
         .with_vsync(true)
-        .with_gl(GlRequest::Specific(glutin::Api::OpenGl, (3, 3)))
+        .with_gl(GlRequest::Specific(glutin::Api::OpenGl, (4, 1)))
         .with_gl_profile(GlProfile::Core);
     let mut display = GlWindow::new(window, context, &events_loop).unwrap();
 
@@ -24,6 +25,8 @@ fn main() {
     gl::load_with(
         |symbol| display.get_proc_address(symbol) as *const _);
 
+    let mut g_state = GraphicsState::new();
+
     let mut keep_running = true;
     while keep_running {
         events_loop.poll_events(|event| {
@@ -33,12 +36,13 @@ fn main() {
             };
         });
         // This hack is required to fix a bug on OS Mojave
-        display.resize(dpi::PhysicalSize::new(1000.0, 700.0));
+        // It resizes the window to its current size.
+        // https://github.com/tomaka/glutin/issues/1069
+        let dpi = display.get_hidpi_factor();
+        let display_size = display.get_inner_size().unwrap();
+        display.resize(display_size.to_physical(dpi));
 
-        unsafe {
-            gl::ClearColor(1.0, 0.0, 0.0, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
-        }
+        g_state.draw_frame();
 
         display.swap_buffers().unwrap();
         //std::thread::sleep(std::time::Duration::from_millis(17));
