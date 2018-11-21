@@ -32,11 +32,13 @@ impl Vertex {
     }
 }
 
+const MAX_NUM_TRIANGLES: u32 = 1e6 as u32;
 const MAX_NUM_VERTICES: u32 = 1e6 as u32;
 
 pub struct GraphicsState {
     vao: GLuint,
     vbo: GLuint,
+    index_buffer: GLuint,
     program: GLuint,
     mv_matrix_uniform: GLint,
     proj_matrix_uniform: GLint
@@ -52,6 +54,7 @@ impl GraphicsState {
         let mut state = GraphicsState {
             vao: 0,
             vbo: 0,
+            index_buffer: 0,
             program: 0,
             mv_matrix_uniform: -1,
             proj_matrix_uniform: -1
@@ -63,8 +66,6 @@ impl GraphicsState {
     }
 
     unsafe fn setup_gl(&mut self) {
-        let vertex_data: [GLfloat; 6] = [0.0, 0.0, 0.5, 0.5, -0.5, 0.5];
-
         gl_log_version_info();
 
         gl::GenVertexArrays(1, &mut self.vao);
@@ -74,6 +75,12 @@ impl GraphicsState {
         gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
         let buffer_size = (size_of::<Vertex>() as u32) * MAX_NUM_VERTICES;
         gl::BufferData(gl::ARRAY_BUFFER, buffer_size as isize,
+            ptr::null(), gl::STATIC_DRAW);
+
+        gl::GenBuffers(1, &mut self.index_buffer);
+        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.index_buffer);
+        let elem_buffer_size = (size_of::<GLuint>() as u32) * MAX_NUM_TRIANGLES;
+        gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, elem_buffer_size as isize,
             ptr::null(), gl::STATIC_DRAW);
 
         self.setup_program();
@@ -133,6 +140,8 @@ impl GraphicsState {
        gl::EnableVertexAttribArray(position_attrib as GLuint);
        gl::EnableVertexAttribArray(color_attrib as GLuint);
        gl::EnableVertexAttribArray(normal_attrib as GLuint);
+
+       log_gl_errors("setup attributes");
     }
 
     pub fn draw_frame(&self) {
@@ -174,13 +183,17 @@ impl GraphicsState {
                     Vec3::new(1_f32, 0_f32, 0_f32)
                     )
             ];
-            let data_size = size_of::<Vertex>() * vertex_data.len();
-            gl::BufferSubData(gl::ARRAY_BUFFER, 0, data_size as isize,
-                              vertex_data.as_ptr() as *const _);
+            let index_data: [GLuint; 3] = [0, 1, 2];
 
-            //gl::PointSize(40.0);
-            //gl::DrawArrays(gl::POINTS, 0, 1);
-            gl::DrawArrays(gl::TRIANGLES, 0, 3);
+            let vertex_data_size = size_of::<Vertex>() * vertex_data.len();
+            gl::BufferSubData(gl::ARRAY_BUFFER, 0, vertex_data_size as isize,
+                              vertex_data.as_ptr() as *const _);
+            let elem_data_size = size_of::<GLuint>() * index_data.len();
+            gl::BufferSubData(gl::ELEMENT_ARRAY_BUFFER, 0, elem_data_size as isize,
+                              index_data.as_ptr() as *const _);
+
+            gl::DrawElements(gl::TRIANGLES, index_data.len() as i32, gl::UNSIGNED_INT,
+                             ptr::null() as *const _);
             log_gl_errors("draw frame");
         }
     }
