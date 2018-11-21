@@ -7,12 +7,47 @@ mod graphics;
 use graphics::*;
 use glutin::*;
 
+use cgmath::*;
+
+// TODO: pass in the elasped time in secs as a double, to use
+// for animation. Also pass in deltaT.
+// TODO: Also, factor this out and make it a struct with an update
+// method so that we can store whatever state we need.
+// TODO: later, also pass in a struct containing the relevant audio data
+fn update() -> Canvas {
+    let mut canvas = Canvas::new();
+    canvas.set_background_color(Vec4::new(0f32, 0f32, 0f32, 1f32));
+    /*
+    canvas.draw_triangle(
+        vec4(0f32, 0f32, 0f32, 1f32),
+        vec4(10f32, 0f32, 0f32, 1f32),
+        vec4(10f32, 10f32, 0f32, 1f32),
+        vec4(0f32, 1f32, 0f32, 1f32)
+    );
+    */
+    /*
+    canvas.draw_pgram(
+        vec4(0f32, 0f32, 0f32, 1f32),
+        vec4(10f32, 0f32, 0f32, 1f32),
+        vec4(0f32, 20f32, 0f32, 1f32),
+        vec4(0f32, 1f32, 0f32, 1f32)
+    );
+    */
+    canvas.draw_ppiped(
+        vec4(0f32, 0f32, 0f32, 1f32),
+        vec4(10f32, 0f32, 0f32, 1f32),
+        vec4(0f32, 10f32, 0f32, 1f32),
+        vec4(0f32, 0f32, 10f32, 1f32),
+        vec4(0f32, 0f32, 1f32, 1f32)
+    );
+    canvas
+}
+
 fn main() {
     let mut events_loop = EventsLoop::new();
     let window = WindowBuilder::new()
         .with_title("music visualizer")
         .with_dimensions(dpi::LogicalSize::new(1000.0, 700.0));
-    // TODO see past project for proper setup on a mac
     let context = ContextBuilder::new()
         .with_vsync(true)
         .with_gl(GlRequest::Specific(glutin::Api::OpenGl, (4, 1)))
@@ -43,7 +78,8 @@ fn main() {
         let display_size = display.get_inner_size().unwrap();
         display.resize(display_size.to_physical(dpi));
 
-        g_state.draw_frame();
+        let canvas = update();
+        g_state.draw_frame(&canvas);
 
         display.swap_buffers().unwrap();
         //std::thread::sleep(std::time::Duration::from_millis(17));

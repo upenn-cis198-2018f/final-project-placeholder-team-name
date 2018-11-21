@@ -1,3 +1,4 @@
+mod shaders;
 
 use gl::types::*;
 use std::ptr;
@@ -6,34 +7,32 @@ use cgmath::*;
 use cgmath::prelude::*;
 use std::mem::{size_of};
 
-mod shaders;
+const MAX_NUM_TRIANGLES: u32 = 1e6 as u32;
+const MAX_NUM_VERTICES: u32 = 1e6 as u32;
 
-type Vec4 = Vector4<f32>;
-type Vec3 = Vector3<f32>;
-type Mat4 = Matrix4<f32>;
-type Pt3 = Point3<f32>;
+pub type Vec4 = Vector4<f32>;
+pub type Vec3 = Vector3<f32>;
+pub type Mat4 = Matrix4<f32>;
+pub type Pt3 = Point3<f32>;
 
 /*
 Used to store vertex data that will be transferred to the VBO.
 We require that it's layout is like that of a C struct.
 */
 #[repr(C)]
-struct Vertex {
+pub struct Vertex {
     position: Vec4,
     color: Vec4,
     normal: Vec3
 }
 
 impl Vertex {
-    fn new(position: Vec4, color: Vec4, normal: Vec3) -> Vertex {
+    pub fn new(position: Vec4, color: Vec4, normal: Vec3) -> Vertex {
         Vertex {
             position, color, normal
         }
     }
 }
-
-const MAX_NUM_TRIANGLES: u32 = 1e6 as u32;
-const MAX_NUM_VERTICES: u32 = 1e6 as u32;
 
 pub struct GraphicsState {
     vao: GLuint,
@@ -144,47 +143,24 @@ impl GraphicsState {
        log_gl_errors("setup attributes");
     }
 
-    pub fn draw_frame(&self) {
+    pub fn draw_frame(&self, canvas: &Canvas) {
         unsafe {
-            gl::ClearColor(0.0, 0.0, 0.0, 1.0);
+            let bg_col = canvas.background_color;
+            gl::ClearColor(bg_col.x, bg_col.y, bg_col.z, bg_col.z);
             gl::Clear(gl::COLOR_BUFFER_BIT);
 
             gl::UseProgram(self.program);
-            
-            // set the uniform values
-            let mv_matrix: Mat4 = Mat4::look_at_dir(
-                Pt3::new(0_f32, 0_f32, 3_f32),
-                Vec3::new(0_f32, 0_f32, -1_f32),
-                Vec3::new(0_f32, 1_f32, 0_f32)
-            );
+
+            // TODO: don't hard-code the proj. calc aspect ratio
             let proj_matrix: Mat4 = cgmath::perspective(
                 Deg(30_f32), 2_f32, 1_f32, 100_f32);
             gl::UniformMatrix4fv(
-                self.mv_matrix_uniform, 1, 0, mv_matrix.as_ptr());
+                self.mv_matrix_uniform, 1, 0, canvas.mv_matrix.as_ptr());
             gl::UniformMatrix4fv(
                 self.proj_matrix_uniform, 1, 0, proj_matrix.as_ptr());
 
-            // buffer some sample vertex data, TODO
-            let z_pos = -50_f32;
-            let vertex_data: [Vertex; 3] = [
-                Vertex::new(
-                    Vec4::new(0_f32, 0_f32, z_pos, 1_f32),
-                    Vec4::new(1_f32, 0_f32, 0_f32, 1_f32),
-                    Vec3::new(1_f32, 0_f32, 0_f32)
-                    ),
-                Vertex::new(
-                    Vec4::new(10_f32, 0_f32, z_pos, 1_f32),
-                    Vec4::new(0_f32, 1_f32, 0_f32, 1_f32),
-                    Vec3::new(1_f32, 0_f32, 0_f32)
-                    ),
-                Vertex::new(
-                    Vec4::new(0_f32, 10_f32, z_pos, 1_f32),
-                    Vec4::new(0_f32, 0_f32, 1_f32, 1_f32),
-                    Vec3::new(1_f32, 0_f32, 0_f32)
-                    )
-            ];
-            let index_data: [GLuint; 3] = [0, 1, 2];
-
+            let vertex_data = &canvas.vertex_data;
+            let index_data = &canvas.index_data;
             let vertex_data_size = size_of::<Vertex>() * vertex_data.len();
             gl::BufferSubData(gl::ARRAY_BUFFER, 0, vertex_data_size as isize,
                               vertex_data.as_ptr() as *const _);
@@ -273,3 +249,109 @@ fn gl_log_version_info() {
              vendor, renderer, version, glsl_version);
 }
 
+fn cross4(a: Vec4, b: Vec4) -> Vec3 {
+    a.truncate().cross(b.truncate())
+}
+
+fn faces_to_indices(faces: Vec<[u32; 4]>) -> Vec<u32> {
+    faces.into_iter().map(|face| {
+        vec![face[0], face[1], face[2], face[0], face[2], face[3]]
+    }).flatten().collect()
+}
+
+pub struct Canvas {
+    background_color: Vec4,
+    mv_matrix: Mat4,
+    vertex_data: Vec<Vertex>,
+    index_data: Vec<GLuint>
+}
+
+impl Canvas {
+    pub fn new() -> Canvas {
+        let mut canvas = Canvas {
+            background_color: Vector4::new(0f32, 0f32, 0f32, 1f32),
+            mv_matrix: Matrix4::zero(),
+            vertex_data: Vec::new(),
+            index_data: Vec::new()
+        };
+        canvas.set_camera(Vec3::new(0f32, 20f32, 20f32),
+            Vec3::zero(), Vec3::new(0f32, 1f32, 0f32));
+        canvas
+    }
+
+    pub fn set_background_color(&mut self, color: Vec4) {
+        self.background_color = color;
+    }
+
+    pub fn set_camera(&mut self, eye: Vec3, target: Vec3, up: Vec3) {
+        self.mv_matrix = Matrix4::look_at_dir(Pt3::from_vec(eye), target - eye, up);
+    }
+    
+    pub fn draw_triangle(&mut self, a: Vec4, b: Vec4, c: Vec4, color: Vec4) {
+        self.draw_half_pgram(a, b - a, c - a, color);
+    }
+
+    // Draw the triangle spanned by the given vectors
+    pub fn draw_half_pgram(&mut self, pos: Vec4, u: Vec4, v: Vec4, color: Vec4) {
+        let normal = cross4(u, v);
+        let mut vertices = vec![
+            Vertex::new(pos, color, normal),
+            Vertex::new(pos + u, color, normal),
+            Vertex::new(pos + v, color, normal)
+        ];
+        let mut indices = vec![0, 1, 2];
+        self.add_data(&mut vertices, &mut indices);
+    }
+
+    // Draw the parallelogram spanned by the given vectors
+    pub fn draw_pgram(&mut self, pos: Vec4, u: Vec4, v: Vec4, color: Vec4) {
+        let normal = cross4(u, v);
+        let mut vertices = vec![
+            Vertex::new(pos, color, normal),
+            Vertex::new(pos + u, color, normal),
+            Vertex::new(pos + v, color, normal),
+            Vertex::new(pos + u + v, color, normal)
+        ];
+        let mut indices = vec![0, 1, 3, 0, 3, 2];
+        self.add_data(&mut vertices, &mut indices);
+    }
+
+    // Draw the parallelopiped spanned by the given vectors
+    pub fn draw_ppiped(&mut self, pos: Vec4, u: Vec4, v: Vec4, w: Vec4, color: Vec4) {
+        let mut positions = vec![
+            pos, pos + u, pos + v, pos + u + v,
+            pos + w, pos + w + u, pos + w + v, pos + w + u + v
+        ];
+        let center = ((pos + u + v + w) + pos) / 2f32;
+        let mut vertices = positions.into_iter().map(|pos| {
+            let normal = (pos - center).truncate().normalize();
+            Vertex::new(pos, color, normal)
+        }).collect();
+        let mut faces = vec![
+            [0, 1, 3, 2],
+            [0, 1, 5, 4],
+            [4, 5, 7, 6],
+            [1, 3, 7, 5],
+            [3, 2, 6, 7],
+            [0, 2, 4, 6]
+        ];
+        let mut indices = faces_to_indices(faces);
+        self.add_data(&mut vertices, &mut indices);
+    }
+
+    pub fn draw_surface<F>(&mut self, samples_x: u32, samples_y: u32, f: F) 
+        where F: Fn(u32, u32) -> Vertex {
+        // TODO - sample the surface at a regular interval and 
+        // draw surface area elements as you go.
+    }
+
+    // the indices must be relative to the start of the list of given vertices
+    fn add_data(&mut self, vertices: &mut Vec<Vertex>, indices: &mut Vec<GLuint>) {
+        let base_index = self.vertex_data.len() as u32;
+        for index in indices.iter_mut() {
+            *index += base_index;
+        }
+        self.vertex_data.append(vertices);
+        self.index_data.append(indices);
+    }
+}

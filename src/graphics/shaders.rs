@@ -18,7 +18,11 @@ out VS_OUT {
 
 void main() {
 	gl_Position = proj_matrix * mv_matrix * position;
-    vs_out.color = color;
+    vec3 light_dir = vec3(1, 1, 1);
+    float atten = 0.2 + clamp(dot(normal, light_dir), 0.0, 1.0);
+    atten = min(atten, 1.0);
+    vec4 out_color = atten * color;
+    vs_out.color = out_color;
     vs_out.normal = normal;
 }
 \0";
