@@ -6,6 +6,7 @@ use std::ffi;
 use cgmath::*;
 use cgmath::prelude::*;
 use std::mem::{size_of};
+use std::f32::*;
 
 const MAX_NUM_TRIANGLES: u32 = 1e6 as u32;
 const MAX_NUM_VERTICES: u32 = 1e6 as u32;
@@ -14,6 +15,13 @@ pub type Vec4 = Vector4<f32>;
 pub type Vec3 = Vector3<f32>;
 pub type Mat4 = Matrix4<f32>;
 pub type Pt3 = Point3<f32>;
+
+/*
+   TODO
+
+   Configure OpenGL properly. Clear the depth buffer and stencil
+   buffer on every frame. Have an option to draw lines to debug.
+*/
 
 /*
 Used to store vertex data that will be transferred to the VBO.
@@ -40,7 +48,9 @@ pub struct GraphicsState {
     index_buffer: GLuint,
     program: GLuint,
     mv_matrix_uniform: GLint,
-    proj_matrix_uniform: GLint
+    proj_matrix_uniform: GLint,
+    framebuffer_width: f64,
+    framebuffer_height: f64
 }
 
 /*
@@ -56,7 +66,9 @@ impl GraphicsState {
             index_buffer: 0,
             program: 0,
             mv_matrix_uniform: -1,
-            proj_matrix_uniform: -1
+            proj_matrix_uniform: -1,
+            framebuffer_width: 1000.0,
+            framebuffer_height: 600.0
         };
         unsafe {
             state.setup_gl();
@@ -83,8 +95,15 @@ impl GraphicsState {
             ptr::null(), gl::STATIC_DRAW);
 
         self.setup_program();
+
+        gl::Enable(gl::DEPTH_TEST);
         
         log_gl_errors("setup_gl");
+    }
+
+    pub fn update_framebuffer_size(&mut self, w: f64, h: f64) {
+        self.framebuffer_width = w;
+        self.framebuffer_height = h;
     }
 
     unsafe fn setup_program(&mut self) {
@@ -147,13 +166,19 @@ impl GraphicsState {
         unsafe {
             let bg_col = canvas.background_color;
             gl::ClearColor(bg_col.x, bg_col.y, bg_col.z, bg_col.z);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
+            gl::ClearDepth(1.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT |
+                      gl::DEPTH_BUFFER_BIT | gl::STENCIL_BUFFER_BIT);
 
             gl::UseProgram(self.program);
 
+            // TODO: for debug only
+            gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
+
             // TODO: don't hard-code the proj. calc aspect ratio
+            let aspect_ratio = self.framebuffer_width / self.framebuffer_height;
             let proj_matrix: Mat4 = cgmath::perspective(
-                Deg(30_f32), 2_f32, 1_f32, 100_f32);
+                Deg(30_f32), aspect_ratio as f32, 1_f32, 100_f32);
             gl::UniformMatrix4fv(
                 self.mv_matrix_uniform, 1, 0, canvas.mv_matrix.as_ptr());
             gl::UniformMatrix4fv(
@@ -274,7 +299,7 @@ impl Canvas {
             vertex_data: Vec::new(),
             index_data: Vec::new()
         };
-        canvas.set_camera(Vec3::new(0f32, 20f32, 20f32),
+        canvas.set_camera(Vec3::new(0f32, 0f32, 20f32),
             Vec3::zero(), Vec3::new(0f32, 1f32, 0f32));
         canvas
     }
@@ -343,6 +368,7 @@ impl Canvas {
         where F: Fn(u32, u32) -> Vertex {
         // TODO - sample the surface at a regular interval and 
         // draw surface area elements as you go.
+        // TODO - also make convenience funcs to convert the sample num to some range
     }
 
     // the indices must be relative to the start of the list of given vertices
@@ -355,3 +381,4 @@ impl Canvas {
         self.index_data.append(indices);
     }
 }
+

@@ -6,33 +6,30 @@ mod graphics;
 
 use graphics::*;
 use glutin::*;
+use std::time;
+use std::f32::consts::*;
 
 use cgmath::*;
 
-// TODO: pass in the elasped time in secs as a double, to use
-// for animation. Also pass in deltaT.
-// TODO: Also, factor this out and make it a struct with an update
-// method so that we can store whatever state we need.
-// TODO: later, also pass in a struct containing the relevant audio data
-fn update() -> Canvas {
-    let mut canvas = Canvas::new();
-    canvas.set_background_color(Vec4::new(0f32, 0f32, 0f32, 1f32));
-    /*
+fn draw_triangle(canvas: &mut Canvas) {
     canvas.draw_triangle(
         vec4(0f32, 0f32, 0f32, 1f32),
         vec4(10f32, 0f32, 0f32, 1f32),
         vec4(10f32, 10f32, 0f32, 1f32),
         vec4(0f32, 1f32, 0f32, 1f32)
     );
-    */
-    /*
+}
+
+fn draw_pgram(canvas: &mut Canvas) {
     canvas.draw_pgram(
         vec4(0f32, 0f32, 0f32, 1f32),
         vec4(10f32, 0f32, 0f32, 1f32),
-        vec4(0f32, 20f32, 0f32, 1f32),
+        vec4(0f32, 10f32, 0f32, 1f32),
         vec4(0f32, 1f32, 0f32, 1f32)
     );
-    */
+}
+
+fn draw_ppiped(canvas: &mut Canvas) {
     canvas.draw_ppiped(
         vec4(0f32, 0f32, 0f32, 1f32),
         vec4(10f32, 0f32, 0f32, 1f32),
@@ -40,6 +37,26 @@ fn update() -> Canvas {
         vec4(0f32, 0f32, 10f32, 1f32),
         vec4(0f32, 0f32, 1f32, 1f32)
     );
+}
+
+// TODO: pass in the elasped time in secs as a double, to use
+// for animation. Also pass in deltaT.
+// TODO: Also, factor this out and make it a struct with an update
+// method so that we can store whatever state we need.
+// TODO: later, also pass in a struct containing the relevant audio data
+fn update(delta_secs: f32, time_secs: f32) -> Canvas {
+    let mut canvas = Canvas::new();
+
+    let ca = vec4(0f32, 0f32, 0f32, 1f32);
+    let cb = vec4(0f32, 1f32, 0f32, 1f32);
+    let anim_factor = ((2f32 * PI * time_secs / 3.0f32).sin() + 1f32) / 2f32;
+    let anim_color = ca + (1f32 - anim_factor) * cb;
+    //canvas.set_background_color(anim_color);
+    
+    //draw_triangle(&mut canvas);
+    draw_pgram(&mut canvas);
+    //draw_ppiped(&mut canvas);
+    
     canvas
 }
 
@@ -63,8 +80,22 @@ fn main() {
 
     let mut g_state = GraphicsState::new();
 
+    let program_start = time::Instant::now();
     let mut keep_running = true;
+    let mut previous_tick = program_start;
+    let frame_period: f64 = 1.0 / 60.0; // in secs
+    let frame_duration = time::Duration::from_millis(
+        (frame_period * 1000.0) as u64);
     while keep_running {
+        // sleep until the start of the next frame
+        let current_time = time::Instant::now();
+        let sleep_duration_opt = frame_duration.checked_sub(
+            current_time.duration_since(previous_tick));
+        if let Some(sleep_duration) = sleep_duration_opt {
+            std::thread::sleep(sleep_duration);
+        };
+        previous_tick = current_time;
+
         events_loop.poll_events(|event| {
             let keep_open = handle_event(&mut display, event);
             if !keep_open && keep_running {
@@ -76,13 +107,19 @@ fn main() {
         // https://github.com/tomaka/glutin/issues/1069
         let dpi = display.get_hidpi_factor();
         let display_size = display.get_inner_size().unwrap();
-        display.resize(display_size.to_physical(dpi));
+        let physical_size = display_size.to_physical(dpi);
+        display.resize(physical_size);
+        g_state.update_framebuffer_size(physical_size.width, physical_size.height);
 
-        let canvas = update();
+        let program_duration = time::Instant::now().duration_since(
+            program_start);
+        let program_duration_secs = (program_duration.as_secs()  as f32) + 
+            (program_duration.subsec_millis() as f32) / 1000.0;
+        let canvas = update(
+            frame_period as f32, program_duration_secs);
         g_state.draw_frame(&canvas);
 
         display.swap_buffers().unwrap();
-        //std::thread::sleep(std::time::Duration::from_millis(17));
     }
 }
 
