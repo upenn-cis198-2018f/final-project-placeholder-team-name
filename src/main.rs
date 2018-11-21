@@ -1,5 +1,6 @@
 extern crate glutin;
 extern crate gl;
+extern crate cgmath;
 
 mod graphics;
 

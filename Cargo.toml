@@ -6,3 +6,4 @@ authors = ["matriley"]
 [dependencies]
 glutin = "*"
 gl = "0.6.0"
+cgmath = "0.16.1"
