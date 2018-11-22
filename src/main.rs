@@ -13,49 +13,112 @@ use cgmath::*;
 
 fn draw_triangle(canvas: &mut Canvas) {
     canvas.draw_triangle(
-        vec4(0f32, 0f32, 0f32, 1f32),
-        vec4(10f32, 0f32, 0f32, 1f32),
-        vec4(10f32, 10f32, 0f32, 1f32),
+        vec3(0f32, 0f32, 0f32),
+        vec3(10f32, 0f32, 0f32),
+        vec3(10f32, 10f32, 0f32),
         vec4(0f32, 1f32, 0f32, 1f32)
     );
 }
 
 fn draw_pgram(canvas: &mut Canvas) {
     canvas.draw_pgram(
-        vec4(0f32, 0f32, 0f32, 1f32),
-        vec4(10f32, 0f32, 0f32, 1f32),
-        vec4(0f32, 10f32, 0f32, 1f32),
+        vec3(0f32, 0f32, 0f32),
+        vec3(5f32, 0f32, 0f32),
+        vec3(0f32, 5f32, 0f32),
         vec4(0f32, 1f32, 0f32, 1f32)
     );
+    canvas.draw_triangle(
+        vec3(0f32, 0f32, 0f32),
+        vec3(5f32, 0f32, 0f32),
+        vec3(5f32, 5f32, 0f32),
+        vec4(1f32, 0f32, 0f32, 1f32)
+        );
+    canvas.draw_triangle(
+        vec3(-5f32, 0f32, 0f32),
+        vec3(0f32, 0f32, 0f32),
+        vec3(0f32, 5f32, 0f32),
+        vec4(0f32, 0f32, 1f32, 1f32)
+        );
 }
 
 fn draw_ppiped(canvas: &mut Canvas) {
+    let x = 20f32;
     canvas.draw_ppiped(
-        vec4(0f32, 0f32, 0f32, 1f32),
-        vec4(10f32, 0f32, 0f32, 1f32),
-        vec4(0f32, 10f32, 0f32, 1f32),
-        vec4(0f32, 0f32, 10f32, 1f32),
+        vec3(0f32, 0f32, 0f32),
+        vec3(x, 0f32, 0f32),
+        vec3(0f32, x, 0f32),
+        vec3(0f32, 0f32, x),
         vec4(0f32, 0f32, 1f32, 1f32)
     );
 }
 
-// TODO: pass in the elasped time in secs as a double, to use
-// for animation. Also pass in deltaT.
+fn draw_ground(canvas: &mut Canvas) {
+    let half_w = 50f32;
+    let h = 10f32;
+    canvas.draw_ppiped(
+        vec3(-half_w, -h, -half_w),
+        vec3(half_w * 2f32, 0f32, 0f32),
+        vec3(0f32, h, 0f32),
+        vec3(0f32, 0f32, half_w * 2f32),
+        vec4(0f32, 0.5f32, 0f32, 1f32)
+    );
+}
+
+fn draw_surf(canvas: &mut Canvas) {
+    canvas.draw_surface(100, 100, |sx, sy, nx, ny| {
+        let x = 100f32 * nx - 50f32;
+        let z = 100f32 * ny - 50f32;
+        let y = 5f32 * (10f32 * 2f32 * PI *  x / 100f32).sin();
+        let p = vec3(x, y, -z);
+        let c = vec4(1f32, 0f32, 0f32, 1f32);
+        (p, c)
+    });
+}
+
+fn draw_sphere(canvas: &mut Canvas) {
+    let r = 10f32;
+    canvas.draw_surface(10, 10, |sx, sy, nx, ny| {
+        let angle_vert = nx * PI;
+        let angle_hor = ny * 2f32 * PI;
+        let y = angle_vert.cos() * r;
+        let x = r * angle_vert.sin() * angle_hor.cos();
+        let z = r * angle_vert.sin() * angle_hor.sin();
+        let p = vec3(x, y, z);
+        let c = vec4(1f32, 0f32, 0f32, 1f32);
+        (p, c)
+    });
+}
+
+fn map(val: f32, cur_min: f32, cur_max: f32) -> f32 {
+    (val - cur_min) / (cur_max - cur_min)
+}
+
+fn lerp(factor: f32, min: f32, max: f32) -> f32 {
+    min + factor * (max - min)
+}
+
 // TODO: Also, factor this out and make it a struct with an update
 // method so that we can store whatever state we need.
 // TODO: later, also pass in a struct containing the relevant audio data
 fn update(delta_secs: f32, time_secs: f32) -> Canvas {
     let mut canvas = Canvas::new();
+    let anim_factor = map((2f32 * PI * time_secs / 5.0f32).sin(), -1f32, 1f32);
 
-    let ca = vec4(0f32, 0f32, 0f32, 1f32);
-    let cb = vec4(0f32, 1f32, 0f32, 1f32);
-    let anim_factor = ((2f32 * PI * time_secs / 3.0f32).sin() + 1f32) / 2f32;
-    let anim_color = ca + (1f32 - anim_factor) * cb;
-    //canvas.set_background_color(anim_color);
-    
+    //canvas.set_camera(vec3(0f32, 0f32, 50f32),
+        //vec3(0f32, 0f32, 0f32), vec3(0f32, 1f32, 0f32));
+    canvas.set_camera(vec3(0f32, 100f32, 100f32),
+        vec3(0f32, 0f32, 0f32), vec3(0f32, 1f32, 0f32));
+    //let cx = lerp(anim_factor, 0f32, -100f32);
+    //let l_pos = vec3(0f32, 20f32, cx);
+    let l_pos = 100f32 * vec3(1f32, 1f32, -1f32);
+    canvas.set_light_position(l_pos);
+
     //draw_triangle(&mut canvas);
-    draw_pgram(&mut canvas);
+    //draw_pgram(&mut canvas);
     //draw_ppiped(&mut canvas);
+    //draw_ground(&mut canvas);
+    //draw_surf(&mut canvas);
+    draw_sphere(&mut canvas);
     
     canvas
 }
