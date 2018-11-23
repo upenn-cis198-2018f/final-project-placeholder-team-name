@@ -4,7 +4,6 @@ use gl::types::*;
 use std::ptr;
 use std::ffi;
 use cgmath::*;
-use cgmath::prelude::*;
 use std::mem::{size_of};
 use std::f32::*;
 use std::f32::consts::*;
@@ -158,6 +157,7 @@ impl GraphicsState {
 
     pub fn draw_frame(&self, canvas: &Canvas) {
         unsafe {
+            // clear buffers
             let bg_col = canvas.background_color;
             gl::ClearColor(bg_col.x, bg_col.y, bg_col.z, bg_col.z);
             gl::ClearDepth(1.0);
@@ -169,6 +169,7 @@ impl GraphicsState {
             // TODO: for debug only
             //gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
 
+            // set uniforms
             let aspect_ratio = self.framebuffer_width / self.framebuffer_height;
             let proj_matrix: Mat4 = cgmath::perspective(
                 Deg(30_f32), aspect_ratio as f32, 1_f32, 10000_f32);
@@ -179,6 +180,7 @@ impl GraphicsState {
             gl::Uniform3fv(
                 self.light_pos_uniform, 1, canvas.light_position.as_ptr());
 
+            // buffer vertex and index data
             let vertex_data = &canvas.vertex_data;
             let index_data = &canvas.index_data;
             let vertex_data_size = size_of::<Vertex>() * vertex_data.len();
@@ -226,6 +228,7 @@ fn log_shader_info_logs(msg: &str, shader: GLuint) {
         }
     }
 }
+
 fn log_gl_errors(msg: &str) {
     if let Some(err) = get_gl_error() {
         println!("GL error: {:?}, {:?}", msg, err);
@@ -271,16 +274,6 @@ fn gl_log_version_info() {
              vendor, renderer, version, glsl_version);
 }
 
-fn cross4(a: Vec4, b: Vec4) -> Vec3 {
-    a.truncate().cross(b.truncate())
-}
-
-fn faces_to_indices(faces: Vec<[u32; 4]>) -> Vec<u32> {
-    faces.into_iter().map(|face| {
-        vec![face[0], face[1], face[2], face[0], face[2], face[3]]
-    }).flatten().collect()
-}
-
 pub struct Canvas {
     background_color: Vec4,
     light_position: Vec3,
@@ -289,7 +282,14 @@ pub struct Canvas {
     index_data: Vec<GLuint>
 }
 
+/*
+   Note: all calculations are done in f32 because OpenGL uses f32 to preserve space.
+   When you type "10.0" in Rust it's a f64, so you must use the "10f32", sadly.
+
+   Note: all colors are (r, g, b, a) vectors, with each component in [0, 1]
+*/
 impl Canvas {
+
     pub fn new() -> Canvas {
         let mut canvas = Canvas {
             background_color: Vec4::new(0f32, 0f32, 0f32, 1f32),
@@ -307,16 +307,24 @@ impl Canvas {
         self.background_color = color;
     }
 
+    /*
+       The viewer will be positioned at eye, looking at target, with head tilted to align
+       with "up". Usually set "up" to (0, 1, 0) for simplicity.
+    */
     pub fn set_camera(&mut self, eye: Vec3, target: Vec3, up: Vec3) {
         self.mv_matrix = Matrix4::look_at_dir(Pt3::from_vec(eye), target - eye, up);
     }
 
+    /*
+       Note that for now there is only one light, and you can't
+       set its color.
+    */
     pub fn set_light_position(&mut self, pos: Vec3) {
         self.light_position = pos;
     }
     
-    // NB: The vertices must be given in CCW winding order for the
-    // normals to be correctly set
+    // NB: The vertices must be given in CCW order for it to face in the correct direction.
+    // Otherwise it may be invisible.
     pub fn draw_triangle(&mut self, a: Vec3, b: Vec3, c: Vec3, color: Vec4) {
         self.draw_half_pgram(a, b - a, c - a, color);
     }
@@ -396,15 +404,14 @@ impl Canvas {
     }
 
     /*
-        Draws a surface by sampling a surface function on a grid of values.
-        The function f takes index_x, index_y, float_x, and float_y, and returns (position, color),
-        where float_x is the sample coordinate converted to the range [0, 1) for convenience.
-        samples_x and samples_y are the number of samples in each axis.
+        Draws a surface by sampling a given function on a grid of values.
+        It calls f for each value in [0, samples_x) X [0, samples_y), as
+        f(index_x, index_y, normalized_x, normalized_y), where the normalized
+        value is the x coordinate mapped to [0, 1], for convenience.
+        It must return (position, color) for the surface at that position.
     */
     pub fn draw_surface<F>(&mut self, samples_x: usize, samples_y: usize, f: F) 
         where F: Fn(usize, usize, f32, f32) -> (Vec3, Vec4) {
-        // TODO - make convenience funcs to convert the sample num to some float range
-
         // create a grid of sampled values
         let mut positions: Vec<Vec<(Vec3, Vec4)>> = Vec::new();
         for x in 0..samples_x {
@@ -443,6 +450,8 @@ impl Canvas {
         });
     }
 
+    // The torus is formed by sweeping a circle of radius r_minor
+    // along a circular path of radius r_major.
     pub fn draw_torus(&mut self, center: Vec3, r_major: f32, r_minor: f32, color: Vec4) {
         self.draw_surface(100, 100, |sx, sy, nx, ny| {
             let angle_major = nx * 2f32 * PI;

@@ -3,156 +3,12 @@ extern crate gl;
 extern crate cgmath;
 
 mod graphics;
+mod visualizer;
 
+use visualizer::*;
 use graphics::*;
 use glutin::*;
 use std::time;
-use std::f32::consts::*;
-
-use cgmath::*;
-
-fn draw_triangle(canvas: &mut Canvas) {
-    canvas.draw_triangle(
-        vec3(0f32, 0f32, 0f32),
-        vec3(10f32, 0f32, 0f32),
-        vec3(10f32, 10f32, 0f32),
-        vec4(0f32, 1f32, 0f32, 1f32)
-    );
-}
-
-fn draw_pgram(canvas: &mut Canvas) {
-    canvas.draw_pgram(
-        vec3(0f32, 0f32, 0f32),
-        vec3(5f32, 0f32, 0f32),
-        vec3(0f32, 5f32, 0f32),
-        vec4(0f32, 1f32, 0f32, 1f32)
-    );
-    canvas.draw_triangle(
-        vec3(0f32, 0f32, 0f32),
-        vec3(5f32, 0f32, 0f32),
-        vec3(5f32, 5f32, 0f32),
-        vec4(1f32, 0f32, 0f32, 1f32)
-        );
-    canvas.draw_triangle(
-        vec3(-5f32, 0f32, 0f32),
-        vec3(0f32, 0f32, 0f32),
-        vec3(0f32, 5f32, 0f32),
-        vec4(0f32, 0f32, 1f32, 1f32)
-        );
-}
-
-fn draw_ppiped(canvas: &mut Canvas) {
-    let x = 20f32;
-    canvas.draw_ppiped(
-        vec3(0f32, 0f32, 0f32),
-        vec3(x, 0f32, 0f32),
-        vec3(0f32, x, 0f32),
-        vec3(0f32, 0f32, x),
-        vec4(0f32, 0f32, 1f32, 1f32)
-    );
-}
-
-fn draw_ground(canvas: &mut Canvas) {
-    let half_w = 50f32;
-    let h = 10f32;
-    canvas.draw_ppiped(
-        vec3(-half_w, -h, -half_w),
-        vec3(half_w * 2f32, 0f32, 0f32),
-        vec3(0f32, h, 0f32),
-        vec3(0f32, 0f32, half_w * 2f32),
-        vec4(0f32, 0.5f32, 0f32, 1f32)
-    );
-}
-
-fn draw_surf(canvas: &mut Canvas) {
-    canvas.draw_surface(100, 100, |sx, sy, nx, ny| {
-        let x = 100f32 * nx - 50f32;
-        let z = 100f32 * ny - 50f32;
-        let y = 5f32 * (10f32 * 2f32 * PI *  x / 100f32).sin();
-        let p = vec3(x, y, -z);
-        let c = vec4(1f32, 0f32, 0f32, 1f32);
-        (p, c)
-    });
-}
-
-fn map(val: f32, cur_min: f32, cur_max: f32) -> f32 {
-    (val - cur_min) / (cur_max - cur_min)
-}
-
-fn lerp(factor: f32, min: f32, max: f32) -> f32 {
-    min + factor * (max - min)
-}
-
-// TODO: Also, factor this out and make it a struct with an update
-// method so that we can store whatever state we need.
-// TODO: later, also pass in a struct containing the relevant audio data
-fn update(delta_secs: f32, time_secs: f32) -> Canvas {
-    let mut canvas = Canvas::new();
-    let anim_factor = map((2f32 * PI * time_secs / 5.0f32).sin(), -1f32, 1f32);
-    let a_p = 3f32;
-    let anim_mod = (time_secs % a_p) / a_p;
-
-    //canvas.set_camera(vec3(0f32, 0f32, 50f32),
-        //vec3(0f32, 0f32, 0f32), vec3(0f32, 1f32, 0f32));
-    let angle = 2f32 * PI * anim_mod;
-    let pos = 200f32 * (angle.cos() * vec3(1f32, 0f32, 0f32) +
-                       angle.sin() * vec3(0f32, 0f32, 1f32));
-    canvas.set_camera(pos, vec3(0f32, 0f32, 0f32), vec3(0f32, 1f32, 0f32));
-    
-    //canvas.set_camera(vec3(0f32, 100f32, 100f32),
-        //vec3(0f32, 0f32, 0f32), vec3(0f32, 1f32, 0f32));
-    //let cx = lerp(anim_factor, 0f32, -100f32);
-    //let l_pos = vec3(0f32, 20f32, cx);
-    let l_pos = 500f32 * vec3(1f32, 1f32, 1f32);
-    canvas.set_light_position(l_pos);
-
-    //draw_triangle(&mut canvas);
-    //draw_pgram(&mut canvas);
-    //draw_ppiped(&mut canvas);
-    //draw_ground(&mut canvas);
-    //draw_surf(&mut canvas);
-    /*
-    canvas.draw_sphere(
-        vec3(20f32, 0f32, 0f32), 4f32,
-        vec4(0f32, 0.75f32, 0.3f32, 1f32));
-
-    canvas.draw_torus(
-        vec3(-10f32, 0f32, 0f32), 10f32, 3f32,
-        vec4(0f32, 0.25f32, 0.75f32, 1f32));
-    */
-
-    /*
-    canvas.draw_surface(100, 100, |sx, sy, nx, ny| {
-        let x = nx * 100f32 - 50f32;
-        let z = -(ny * 100f32 - 50f32);
-        let y = 10f32 * (3f32 * 2f32 * PI * x).sin() *
-            (3f32 * 2f32 * PI * ny).sin();
-        let pt = vec3(x, y, z);
-        let color = vec4(0f32, ny, 1f32 - ny, 1f32);
-        (pt, color)
-    });
-    */
-    let center = vec3(0f32, 0f32, 0f32);
-    canvas.draw_surface(100, 100, |sx, sy, nx, ny| {
-        let r =
-            lerp(anim_factor, 0f32, 20f32)
-            * (5f32 * 2f32 * PI * ny).sin()
-            * (5f32 * 2f32 * PI * nx).sin()
-            + 20f32;
-        let angle_vert = nx * PI;
-        let angle_hor = ny * 2f32 * PI;
-        let y = angle_vert.cos() * r;
-        let x = r * angle_vert.sin() * angle_hor.cos();
-        let z = r * angle_vert.sin() * angle_hor.sin();
-        let p = vec3(x, y, z);
-        let color_a = vec4(0.75f32, 0f32, 0.5f32, 1f32);
-        let color_b = vec4(0.25f32, 0.75f32, 0.25f32, 1f32);
-        let color = color_a + anim_factor * (color_b - color_a);
-        (p + center, color)
-    });
-    
-    canvas
-}
 
 fn main() {
     let mut events_loop = EventsLoop::new();
@@ -180,6 +36,7 @@ fn main() {
     let frame_period: f64 = 1.0 / 60.0; // in secs
     let frame_duration = time::Duration::from_millis(
         (frame_period * 1000.0) as u64);
+    let mut visualizer = Visualizer::new();
     while keep_running {
         // sleep until the start of the next frame
         let current_time = time::Instant::now();
@@ -209,7 +66,7 @@ fn main() {
             program_start);
         let program_duration_secs = (program_duration.as_secs()  as f32) + 
             (program_duration.subsec_millis() as f32) / 1000.0;
-        let canvas = update(
+        let canvas = visualizer.update(
             frame_period as f32, program_duration_secs);
         g_state.draw_frame(&canvas);
 
