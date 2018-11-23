@@ -75,20 +75,6 @@ fn draw_surf(canvas: &mut Canvas) {
     });
 }
 
-fn draw_sphere(canvas: &mut Canvas) {
-    let r = 10f32;
-    canvas.draw_surface(10, 10, |sx, sy, nx, ny| {
-        let angle_vert = nx * PI;
-        let angle_hor = ny * 2f32 * PI;
-        let y = angle_vert.cos() * r;
-        let x = r * angle_vert.sin() * angle_hor.cos();
-        let z = r * angle_vert.sin() * angle_hor.sin();
-        let p = vec3(x, y, z);
-        let c = vec4(1f32, 0f32, 0f32, 1f32);
-        (p, c)
-    });
-}
-
 fn map(val: f32, cur_min: f32, cur_max: f32) -> f32 {
     (val - cur_min) / (cur_max - cur_min)
 }
@@ -103,14 +89,21 @@ fn lerp(factor: f32, min: f32, max: f32) -> f32 {
 fn update(delta_secs: f32, time_secs: f32) -> Canvas {
     let mut canvas = Canvas::new();
     let anim_factor = map((2f32 * PI * time_secs / 5.0f32).sin(), -1f32, 1f32);
+    let a_p = 3f32;
+    let anim_mod = (time_secs % a_p) / a_p;
 
     //canvas.set_camera(vec3(0f32, 0f32, 50f32),
         //vec3(0f32, 0f32, 0f32), vec3(0f32, 1f32, 0f32));
-    canvas.set_camera(vec3(0f32, 100f32, 100f32),
-        vec3(0f32, 0f32, 0f32), vec3(0f32, 1f32, 0f32));
+    let angle = 2f32 * PI * anim_mod;
+    let pos = 200f32 * (angle.cos() * vec3(1f32, 0f32, 0f32) +
+                       angle.sin() * vec3(0f32, 0f32, 1f32));
+    canvas.set_camera(pos, vec3(0f32, 0f32, 0f32), vec3(0f32, 1f32, 0f32));
+    
+    //canvas.set_camera(vec3(0f32, 100f32, 100f32),
+        //vec3(0f32, 0f32, 0f32), vec3(0f32, 1f32, 0f32));
     //let cx = lerp(anim_factor, 0f32, -100f32);
     //let l_pos = vec3(0f32, 20f32, cx);
-    let l_pos = 100f32 * vec3(1f32, 1f32, -1f32);
+    let l_pos = 500f32 * vec3(1f32, 1f32, 1f32);
     canvas.set_light_position(l_pos);
 
     //draw_triangle(&mut canvas);
@@ -118,7 +111,45 @@ fn update(delta_secs: f32, time_secs: f32) -> Canvas {
     //draw_ppiped(&mut canvas);
     //draw_ground(&mut canvas);
     //draw_surf(&mut canvas);
-    draw_sphere(&mut canvas);
+    /*
+    canvas.draw_sphere(
+        vec3(20f32, 0f32, 0f32), 4f32,
+        vec4(0f32, 0.75f32, 0.3f32, 1f32));
+
+    canvas.draw_torus(
+        vec3(-10f32, 0f32, 0f32), 10f32, 3f32,
+        vec4(0f32, 0.25f32, 0.75f32, 1f32));
+    */
+
+    /*
+    canvas.draw_surface(100, 100, |sx, sy, nx, ny| {
+        let x = nx * 100f32 - 50f32;
+        let z = -(ny * 100f32 - 50f32);
+        let y = 10f32 * (3f32 * 2f32 * PI * x).sin() *
+            (3f32 * 2f32 * PI * ny).sin();
+        let pt = vec3(x, y, z);
+        let color = vec4(0f32, ny, 1f32 - ny, 1f32);
+        (pt, color)
+    });
+    */
+    let center = vec3(0f32, 0f32, 0f32);
+    canvas.draw_surface(100, 100, |sx, sy, nx, ny| {
+        let r =
+            lerp(anim_factor, 0f32, 20f32)
+            * (5f32 * 2f32 * PI * ny).sin()
+            * (5f32 * 2f32 * PI * nx).sin()
+            + 20f32;
+        let angle_vert = nx * PI;
+        let angle_hor = ny * 2f32 * PI;
+        let y = angle_vert.cos() * r;
+        let x = r * angle_vert.sin() * angle_hor.cos();
+        let z = r * angle_vert.sin() * angle_hor.sin();
+        let p = vec3(x, y, z);
+        let color_a = vec4(0.75f32, 0f32, 0.5f32, 1f32);
+        let color_b = vec4(0.25f32, 0.75f32, 0.25f32, 1f32);
+        let color = color_a + anim_factor * (color_b - color_a);
+        (p + center, color)
+    });
     
     canvas
 }

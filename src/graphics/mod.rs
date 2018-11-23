@@ -7,12 +7,14 @@ use cgmath::*;
 use cgmath::prelude::*;
 use std::mem::{size_of};
 use std::f32::*;
+use std::f32::consts::*;
 
 const VERTEX_BUFFER_SIZE: usize = 1e8 as usize;
 const INDEX_BUFFER_SIZE: usize = 1e8 as usize;
 
 pub type Vec4 = Vector4<f32>;
 pub type Vec3 = Vector3<f32>;
+pub type Vec2 = Vector2<f32>;
 pub type Mat4 = Matrix4<f32>;
 pub type Pt3 = Point3<f32>;
 
@@ -427,6 +429,34 @@ impl Canvas {
                 self.draw_tri_from_array([s, s_uv, s_v]);
             }
         }
+    }
+
+    pub fn draw_sphere(&mut self, center: Vec3, r: f32, color: Vec4) {
+        self.draw_surface(100, 100, |sx, sy, nx, ny| {
+            let angle_vert = nx * PI;
+            let angle_hor = ny * 2f32 * PI;
+            let y = angle_vert.cos() * r;
+            let x = r * angle_vert.sin() * angle_hor.cos();
+            let z = r * angle_vert.sin() * angle_hor.sin();
+            let p = vec3(x, y, z);
+            (p + center, color)
+        });
+    }
+
+    pub fn draw_torus(&mut self, center: Vec3, r_major: f32, r_minor: f32, color: Vec4) {
+        self.draw_surface(100, 100, |sx, sy, nx, ny| {
+            let angle_major = nx * 2f32 * PI;
+            let angle_minor = ny * 2f32 * PI;
+            let major_pt: Vec3 = r_major * (
+                angle_major.cos() * vec3(1f32, 0f32, 0f32) +
+                angle_major.sin() * vec3(0f32, 1f32, 0f32));
+            let minor_x_vec = -major_pt.normalize();
+            let minor_y_vec = vec3(0f32, 0f32, 1f32);
+            let minor_pt: Vec3 = r_minor * (
+                angle_minor.cos() * minor_x_vec +
+                angle_minor.sin() * minor_y_vec);
+            (center + major_pt + minor_pt, color)
+        });
     }
 
     // the indices must be relative to the start of the list of given vertices
