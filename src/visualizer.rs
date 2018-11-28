@@ -16,6 +16,10 @@ impl Visualizer {
     // later, also pass in a struct containing the relevant audio data
     pub fn update(&mut self, delta_secs: f32, time_secs: f32) -> Canvas {
         let mut canvas = Canvas::new();
+        
+        // TODO: for debugging
+        println!("time (s): {}", time_secs);
+
         // loops from 0 to 1, then back to 0, and so on
         let anim_factor = map((2f32 * PI * time_secs / 5.0f32).sin(), -1f32, 1f32);
         // loops from 0 to 1, with wraparound

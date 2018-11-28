@@ -19,16 +19,29 @@ fn main() {
         .with_vsync(true)
         .with_gl(GlRequest::Specific(glutin::Api::OpenGl, (4, 1)))
         .with_gl_profile(GlProfile::Core);
-    let mut display = GlWindow::new(window, context, &events_loop).unwrap();
 
-    unsafe {
-        display.make_current().unwrap();
-    }
+    // attempt to create a window
+    let display_result = GlWindow::new(window, context, &events_loop);
+    let mut display_opt = match display_result {
+        Ok(display) => Some(display),
+        Err(err) => {
+            println!("{:?}", err);
+            None
+        }
+    };
 
-    gl::load_with(
-        |symbol| display.get_proc_address(symbol) as *const _);
-
+    // if we have a window, setup OpenGL
     let mut g_state = GraphicsState::new();
+    if let Some(ref display) = display_opt {
+        unsafe {
+            display.make_current().unwrap_or_else(|err| {
+                println!("Context creation error:\n{:?}", err);
+            });
+        }
+        gl::load_with(
+            |symbol| display.get_proc_address(symbol) as *const _);
+        g_state.setup_opengl();
+    }
 
     let program_start = time::Instant::now();
     let mut keep_running = true;
@@ -47,20 +60,24 @@ fn main() {
         };
         previous_tick = current_time;
 
-        events_loop.poll_events(|event| {
-            let keep_open = handle_event(&mut display, event);
-            if !keep_open && keep_running {
-                keep_running = false
-            };
-        });
-        // This hack is required to fix a bug on OS Mojave
-        // It resizes the window to its current size.
-        // https://github.com/tomaka/glutin/issues/1069
-        let dpi = display.get_hidpi_factor();
-        let display_size = display.get_inner_size().unwrap();
-        let physical_size = display_size.to_physical(dpi);
-        display.resize(physical_size);
-        g_state.update_framebuffer_size(physical_size.width, physical_size.height);
+        // if we have a window, poll for events and resize to fit the window
+        if let Some(ref mut display) = display_opt {
+            events_loop.poll_events(|event| {
+                let keep_open = handle_event(display, event);
+                if !keep_open && keep_running {
+                    keep_running = false
+                };
+            });
+            // This hack is required to fix a bug on OS Mojave
+            // It resizes the window to its current size.
+            // https://github.com/tomaka/glutin/issues/1069
+            let dpi = display.get_hidpi_factor();
+            if let Some(display_size) = display.get_inner_size() {
+                let physical_size = display_size.to_physical(dpi);
+                display.resize(physical_size);
+                g_state.update_framebuffer_size(physical_size.width, physical_size.height);
+            }
+        }
 
         let program_duration = time::Instant::now().duration_since(
             program_start);
@@ -68,9 +85,14 @@ fn main() {
             (program_duration.subsec_millis() as f32) / 1000.0;
         let canvas = visualizer.update(
             frame_period as f32, program_duration_secs);
-        g_state.draw_frame(&canvas);
 
-        display.swap_buffers().unwrap();
+        // if we have a window, render the canvas to it
+        if let Some(ref display) = display_opt {
+            g_state.draw_frame(&canvas);
+            display.swap_buffers().unwrap_or_else(|err| {
+                println!("Error on swap buffers:\n{:?}", err);
+            });
+        }
     }
 }
 

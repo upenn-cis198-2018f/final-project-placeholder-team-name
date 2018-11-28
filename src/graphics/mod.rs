@@ -51,7 +51,7 @@ pub struct GraphicsState {
 impl GraphicsState {
 
     pub fn new() -> GraphicsState {
-        let mut state = GraphicsState {
+        GraphicsState {
             vao: 0,
             vbo: 0,
             index_buffer: 0,
@@ -61,34 +61,32 @@ impl GraphicsState {
             light_pos_uniform: -1,
             framebuffer_width: 1000.0,
             framebuffer_height: 600.0
-        };
-        unsafe {
-            state.setup_gl();
         }
-        state
     }
 
-    unsafe fn setup_gl(&mut self) {
-        gl_log_version_info();
+    pub fn setup_opengl(&mut self) {
+        unsafe {
+            gl_log_version_info();
 
-        gl::GenVertexArrays(1, &mut self.vao);
-        gl::BindVertexArray(self.vao);
+            gl::GenVertexArrays(1, &mut self.vao);
+            gl::BindVertexArray(self.vao);
 
-        gl::GenBuffers(1, &mut self.vbo);
-        gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
-        gl::BufferData(gl::ARRAY_BUFFER, VERTEX_BUFFER_SIZE as isize,
-            ptr::null(), gl::STATIC_DRAW);
+            gl::GenBuffers(1, &mut self.vbo);
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
+            gl::BufferData(gl::ARRAY_BUFFER, VERTEX_BUFFER_SIZE as isize,
+                ptr::null(), gl::STATIC_DRAW);
 
-        gl::GenBuffers(1, &mut self.index_buffer);
-        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.index_buffer);
-        gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, INDEX_BUFFER_SIZE as isize,
-            ptr::null(), gl::STATIC_DRAW);
+            gl::GenBuffers(1, &mut self.index_buffer);
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.index_buffer);
+            gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, INDEX_BUFFER_SIZE as isize,
+                ptr::null(), gl::STATIC_DRAW);
 
-        self.setup_program();
+            self.setup_program();
 
-        gl::Enable(gl::DEPTH_TEST);
-        
-        log_gl_errors("setup_gl");
+            gl::Enable(gl::DEPTH_TEST);
+            
+            log_gl_errors("setup_opengl");
+        }
     }
 
     pub fn update_framebuffer_size(&mut self, w: f64, h: f64) {
