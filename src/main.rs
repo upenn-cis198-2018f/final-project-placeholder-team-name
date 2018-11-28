@@ -31,6 +31,16 @@ fn main() {
     };
 
     // if we have a window, setup OpenGL
+        if let Some(ref display) = display_opt {
+        unsafe {
+            display.make_current().unwrap_or_else(|err| {
+                println!("Context creation error:\n{:?}", err);
+            });
+        }
+        gl::load_with(
+            |symbol| display.get_proc_address(symbol) as *const _);
+    }
+
     let mut g_state = GraphicsState::new();
     if let Some(ref display) = display_opt {
         unsafe {
