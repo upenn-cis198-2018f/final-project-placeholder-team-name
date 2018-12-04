@@ -1,127 +1,69 @@
-extern crate glutin;
-extern crate gl;
-extern crate cgmath;
+extern crate hound;
+extern crate num;
+extern crate rustfft;
+extern crate find_folder;
+extern crate portaudio;
+extern crate sample;
 
-mod graphics;
-mod visualizer;
+mod audio;
 
-use visualizer::*;
-use graphics::*;
-use glutin::*;
-use std::time;
+use audio::*;
+use std::f32::consts::PI;
+use std::i16;
+
+
+// Writing Sine Wave for testing purposes
+fn write_sin_wav(note: f32) {
+	let sampling_freq = 44100;
+	let sampling_bits = 16;
+	let amplitude = i16::MAX as f32;
+	let note_freq = note;
+	let length = 2;
+
+	let no_of_samples = sampling_freq * length;
+	let normalized_sample_indices = (0 .. no_of_samples).
+		map(|x| x as f32 / sampling_freq as f32);
+
+	let spec = hound::WavSpec {
+		channels: 1,
+		sample_rate: sampling_freq,
+		bits_per_sample: sampling_bits
+	};
+
+	let maybe_writer = hound::WavWriter::create("sine.wav", spec);
+	let mut xs: Vec<f32> = Vec::with_capacity(no_of_samples as usize);
+	let mut ys: Vec<f32> = Vec::with_capacity(no_of_samples as usize);
+
+	match maybe_writer {
+		Ok(writer_obj) => {
+			let mut writer = writer_obj;
+			for t in normalized_sample_indices {
+				let sample = (t * note_freq * 2.0 * PI).sin();
+				xs.push(t);
+				ys.push(sample);
+				writer.write_sample((sample * amplitude) as i16).unwrap();
+			}
+		},
+		Err(e) => {
+			println!("No");
+			println!("{}", e);
+		}
+	}
+
+	}
+
 
 fn main() {
-    let mut events_loop = EventsLoop::new();
-    let window = WindowBuilder::new()
-        .with_title("music visualizer")
-        .with_dimensions(dpi::LogicalSize::new(1000.0, 700.0));
-    let context = ContextBuilder::new()
-        .with_vsync(true)
-        .with_gl(GlRequest::Specific(glutin::Api::OpenGl, (4, 1)))
-        .with_gl_profile(GlProfile::Core);
+		
+	// let music = find_folder::Search::ParentsThenKids(5, 5).for_folder("music").unwrap();
+	// let mut filename = assets.join("music.wav");
+	
 
-    // attempt to create a window
-    let display_result = GlWindow::new(window, context, &events_loop);
-    let mut display_opt = match display_result {
-        Ok(display) => Some(display),
-        Err(err) => {
-            println!("{:?}", err);
-            None
-        }
-    };
-
-    // if we have a window, setup OpenGL
-        if let Some(ref display) = display_opt {
-        unsafe {
-            display.make_current().unwrap_or_else(|err| {
-                println!("Context creation error:\n{:?}", err);
-            });
-        }
-        gl::load_with(
-            |symbol| display.get_proc_address(symbol) as *const _);
-    }
-
-    let mut g_state = GraphicsState::new();
-    if let Some(ref display) = display_opt {
-        unsafe {
-            display.make_current().unwrap_or_else(|err| {
-                println!("Context creation error:\n{:?}", err);
-            });
-        }
-        gl::load_with(
-            |symbol| display.get_proc_address(symbol) as *const _);
-        g_state.setup_opengl();
-    }
-
-    let program_start = time::Instant::now();
-    let mut keep_running = true;
-    let mut previous_tick = program_start;
-    let frame_period: f64 = 1.0 / 60.0; // in secs
-    let frame_duration = time::Duration::from_millis(
-        (frame_period * 1000.0) as u64);
-    let mut visualizer = Visualizer::new();
-    while keep_running {
-        // sleep until the start of the next frame
-        let current_time = time::Instant::now();
-        let sleep_duration_opt = frame_duration.checked_sub(
-            current_time.duration_since(previous_tick));
-        if let Some(sleep_duration) = sleep_duration_opt {
-            std::thread::sleep(sleep_duration);
-        };
-        previous_tick = current_time;
-
-        // if we have a window, poll for events and resize to fit the window
-        if let Some(ref mut display) = display_opt {
-            events_loop.poll_events(|event| {
-                let keep_open = handle_event(display, event);
-                if !keep_open && keep_running {
-                    keep_running = false
-                };
-            });
-            // This hack is required to fix a bug on OS Mojave
-            // It resizes the window to its current size.
-            // https://github.com/tomaka/glutin/issues/1069
-            let dpi = display.get_hidpi_factor();
-            if let Some(display_size) = display.get_inner_size() {
-                let physical_size = display_size.to_physical(dpi);
-                display.resize(physical_size);
-                g_state.update_framebuffer_size(physical_size.width, physical_size.height);
-            }
-        }
-
-        let program_duration = time::Instant::now().duration_since(
-            program_start);
-        let program_duration_secs = (program_duration.as_secs()  as f32) + 
-            (program_duration.subsec_millis() as f32) / 1000.0;
-        let canvas = visualizer.update(
-            frame_period as f32, program_duration_secs);
-
-        // if we have a window, render the canvas to it
-        if let Some(ref display) = display_opt {
-            g_state.draw_frame(&canvas);
-            display.swap_buffers().unwrap_or_else(|err| {
-                println!("Error on swap buffers:\n{:?}", err);
-            });
-        }
-    }
-}
-
-fn handle_event(display: &mut GlWindow, event: Event) -> bool {
-    match event {
-        Event::WindowEvent{event: win_event, ..} => {
-            match win_event {
-                WindowEvent::CloseRequested => return false,
-                WindowEvent::Resized(logical_size) => {
-                    // when the window resizes, we must resize the context
-                    let dpi = display.get_hidpi_factor();
-                    display.resize(logical_size.to_physical(dpi));
-                },
-                _ => {
-                    // TODO: forward mouse and key to ImGui backend
-                }
-            }
-        },
-        _ => ()
-    };
-    true
+	// Testing with sine wave
+	write_sin_wav(450.0);
+	if let Some(peak) = find_spectral_peak("sine.wav") {
+		println!("Max frequency: {} Hz", peak);
+	}
+	return_rms("sine.wav");
+	playback("sine.wav");
 }
