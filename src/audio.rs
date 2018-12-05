@@ -49,7 +49,7 @@ pub fn playback(filename: &str) {
 	let reader = hound::WavReader::open(filename).unwrap();
 	let spec = reader.spec();
 	let samples = reader.into_samples::<i16>().filter_map(Result::ok);
-	let mut frames = signal::from_interleaved_samples_iter(samples).until_exhausted();
+	//let mut frames = signal::from_interleaved_samples_iter(samples).until_exhausted();
 		
 	let pa = portaudio::PortAudio::new().unwrap();
 	let ch = spec.channels as i32;
@@ -60,10 +60,10 @@ pub fn playback(filename: &str) {
 	let (complete_tx, complete_rx) = ::std::sync::mpsc::channel();
 		
 	let callback = move |portaudio::OutputStreamCallbackArgs { buffer, .. }| {
-		let buffer: &mut [[i16; 2]] = buffer.to_frame_slice_mut().unwrap();
-		for out_frame in buffer {
-			match frames.next() {
-				Some(frame) => *out_frame = frame,
+		//let buffer: &mut [[i16; 2]] = buffer.to_frame_slice_mut().unwrap();
+		for out_sample in buffer {
+			match samples.next() {
+				Some(sample) => *out_sample = sample,
 				None => {
 					complete_tx.send(()).unwrap();
 					return portaudio::Complete;

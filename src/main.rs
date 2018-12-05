@@ -59,9 +59,9 @@ fn main() {
 	if args.len() == 2 {
 		let filename = &args[1];
 		println!("Song choice is: {}", filename);
-		if let Some(peak) = find_spectral_peak(filename) {
-			println!("Max frequency: {} Hz", peak);
-		}
+		// if let Some(peak) = find_spectral_peak(filename) {
+		// 	println!("Max frequency: {} Hz", peak);
+		// }
 		return_rms(filename);
 		playback(filename);
 	} else {
