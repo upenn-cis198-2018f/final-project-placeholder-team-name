@@ -45,6 +45,8 @@ pub fn get_peaks(filename: &str) -> Option<f32> {
 	let mut signal = reader.samples::<i16>().map(|x| Complex::new(x.unwrap() as f32, 0f32)).collect::<Vec<_>>();
 	let mut spectrum = signal.clone();
 
+    println!("Signal and Spectrum loaded");
+
     // let mut start_idx = 0;
     // while (start_idx + num_samples < signal.len()) {
     //     let end_idx = start_idx + num_samples;
@@ -59,6 +61,7 @@ pub fn get_peaks(filename: &str) -> Option<f32> {
 
     fft.process(&mut signal[0..num_samples], &mut spectrum[0..num_samples]);
     let max_peak = spectrum.iter().take(num_samples / 2).enumerate().max_by_key(|&(_, freq)| freq.norm() as u32);
+    println!("{:?}", max_peak)
     if let Some((i, _)) = max_peak {
         let bin = 44100f32 / num_samples as f32;
         println!("FFT: {}", i as f32 * bin);
