@@ -187,12 +187,13 @@ fn print_time(tevent_rx: Receiver<f64>, peaks: Vec<f32>) {
 			curr_peak = match peaks_iter.next() {
 				Some(p) => p,
 				None => 0f32
-			}
+			};
 			diff_time = diff_time + inc;
 			println!("Time: {:?}, Peak: {:?}", start_time.elapsed(), curr_peak);
+			println!("Diff Time: {:?}", diff_time);
 		}
 		while let Ok(_) = tevent_rx.try_recv() {
-			println!("count_down: {:?}", start_time.elapsed());
+			println!("Time: {:?}", start_time.elapsed());
 		}
 		thread::sleep(time::Duration::from_millis(1));
 	}
