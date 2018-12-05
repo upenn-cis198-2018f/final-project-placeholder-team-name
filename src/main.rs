@@ -92,10 +92,15 @@ fn main() {
 }
 
 fn print_time(tevent_rx: Receiver<f64>) {
+	let mut time = 0.0;
+	tevent_rx.recv().unwrap();
+	let start_time = time::Instant::now()
+
 	loop {
-		while let Ok(count_down) = tevent_rx.try_recv() {
-			println!("count_down: {:?}", count_down);
+		while let Ok(_) = tevent_rx.try_recv() {
+			time = time::Instant::now() - start_time;
+			println!("count_down: {:?}", time);
 		}
-		thread::sleep(time::Duration::from_millis(15));
+		thread::sleep(time::Duration::from_millis(10));
 	}
 }
