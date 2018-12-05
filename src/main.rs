@@ -75,12 +75,25 @@ fn main() {
 
 		// Spawn a separate thread to stream the audio
 		let song_arg = filename.clone();
-		let handle = thread::spawn(move || {
+		let audio_thread = thread::spawn(move || {
 			playback(&song_arg, tevent_tx);
 		});
 
-		handle.join().unwrap();
+		let time_thread = thread::spawn(move || {
+			print_time(tevent_rx);
+		});
+
+		time_thread.join().unwrap()
+		audio_thread.join().unwrap();
 	} else {
 		println!("Please input one filename in quotation marks.");
 	}
+}
+
+fn print_time(tevent_rx: Receiver<f64>) {
+	while let Err(mpsc::TryRecvError::Empty) = tevent_rx.try_recv() {}
+
+	while let Ok(count_down) = tevent_rx.try_recv() {
+        println!("count_down: {:?}", count_down);
+    }
 }
