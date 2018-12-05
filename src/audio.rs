@@ -38,7 +38,7 @@ pub fn get_peaks(filename: &str) -> Option<f32> {
 	let mut reader = hound::WavReader::open(filename).expect("Failed to open WAV file");
     let spec = reader.spec();
 
-    let num_samples = ((0.04 as u32) * spec.sample_rate) as usize;
+    let num_samples = (spec.sample_rate / 25) as usize;
 	let mut planner = FFTplanner::new(false);
 	let fft = planner.plan_fft(num_samples);
 
@@ -47,25 +47,27 @@ pub fn get_peaks(filename: &str) -> Option<f32> {
 
     println!("Signal and Spectrum loaded");
 
-    // let mut start_idx = 0;
-    // while (start_idx + num_samples < signal.len()) {
-    //     let end_idx = start_idx + num_samples;
-    //     fft.process(&mut signal[start_idx..end_idx], &mut spectrum[start_idx..end_idx]);
-    //     let max_peak = spectrum.iter().take(num_samples / 2).enumerate().max_by_key(|&(_, freq)| freq.norm() as u32);
-    //     if let Some((i, _)) = max_peak {
-    //         let bin = 44100f32 / num_samples as f32;
-    //         println!("{}", i as f32 * bin);
-    //     } else {}
-    //     start_idx = end_idx;
-    // }
-
-    fft.process(&mut signal[0..num_samples], &mut spectrum[0..num_samples]);
-    let max_peak = spectrum.iter().take(num_samples / 2).enumerate().max_by_key(|&(_, freq)| freq.norm() as u32);
-    println!("{:?}", max_peak)
-    if let Some((i, _)) = max_peak {
-        let bin = 44100f32 / num_samples as f32;
-        println!("FFT: {}", i as f32 * bin);
+    let mut start_idx = 0;
+    while (start_idx + num_samples < signal.len()) {
+        let end_idx = start_idx + num_samples;
+        fft.process(&mut signal[start_idx..end_idx], &mut spectrum[start_idx..end_idx]);
+        let max_peak = spectrum[start_idx..end_idx].iter().take(num_samples / 2).enumerate().max_by_key(|&(_, freq)| freq.norm() as u32);
+        if let Some((i, _)) = max_peak {
+            let bin = 44100f32 / num_samples as f32;
+            println!("{}", i as f32 * bin);
+        } else {
+            println!("No peak");
+        }
+        start_idx = end_idx;
     }
+
+    // fft.process(&mut signal[0..num_samples], &mut spectrum[0..num_samples]);
+    // let max_peak = spectrum.iter().take(num_samples / 2).enumerate().max_by_key(|&(_, freq)| freq.norm() as u32);
+    // println!("{:?}", max_peak)
+    // if let Some((i, _)) = max_peak {
+    //     let bin = 44100f32 / num_samples as f32;
+    //     println!("FFT: {}", i as f32 * bin);
+    // }
 
     None
 }
