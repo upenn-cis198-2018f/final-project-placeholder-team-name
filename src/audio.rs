@@ -5,7 +5,6 @@ extern crate find_folder;
 extern crate portaudio;
 extern crate sample;
 
-
 use sample::{signal, Signal, ToFrameSliceMut};
 use std::i16;
 use hound::*;
@@ -33,7 +32,8 @@ pub fn find_spectral_peak(filename: &str) -> Option<f32> {
 	}
 }
 
-// FFT function
+// Splits a .wav file into 10ms slices and precomputes the peak frequency for each
+// slice using a FFT. Returns a vector containing the computed frequencies.
 pub fn get_peaks(filename: &str) -> Vec<f32> {
     let mut peaks : Vec<f32> = Vec::new();
 	let mut reader = hound::WavReader::open(filename).expect("Failed to open WAV file");
@@ -46,7 +46,7 @@ pub fn get_peaks(filename: &str) -> Vec<f32> {
 	let mut signal = reader.samples::<i16>().map(|x| Complex::new(x.unwrap() as f32, 0f32)).collect::<Vec<_>>();
 	let mut spectrum = signal.clone();
 
-    println!("Signal and Spectrum loaded");
+    println!("Audio samples loaded");
 
     let mut start_idx = 0;
     while (start_idx + num_samples < signal.len()) {
@@ -65,7 +65,6 @@ pub fn get_peaks(filename: &str) -> Vec<f32> {
     peaks
 }
 
-
 // Possibly useful for analysis, could also be called in buffer
 pub fn return_rms(filename: &str) {
 	let mut reader = hound::WavReader::open(filename).unwrap();
@@ -76,11 +75,8 @@ pub fn return_rms(filename: &str) {
 	println!("RMS is {}", (sum / reader.len() as f64).sqrt());		
 }
 
-
-
-
 // Playback function
-pub fn playback(filename: &str, tevent_tx: Sender<f64>) {
+pub fn playback(filename: &str, tevent_tx: Sender<f64>, pdone_tx: Sender<bool>) {
 	let reader = hound::WavReader::open(filename).unwrap();
 	let spec = reader.spec();
 	let sample_vec : Vec<i16> = reader.into_samples::<i16>()
@@ -97,8 +93,11 @@ pub fn playback(filename: &str, tevent_tx: Sender<f64>) {
 	let (complete_tx, complete_rx) = mpsc::channel();
 
 	let callback = move |portaudio::OutputStreamCallbackArgs { buffer, time, .. }| {
-		tevent_tx.send(time.current).ok();
+		// Every time the callback is executed, pass time data along the channel
+        // to allow sychronization with the frequency data
+        tevent_tx.send(time.current).ok();
 
+        // Pass the sample data through to the output buffer
 		for out_sample in buffer {
 			match samples.next() {
 				Some(sample) => *out_sample = sample,
@@ -114,26 +113,13 @@ pub fn playback(filename: &str, tevent_tx: Sender<f64>) {
 	let mut stream = pa.open_non_blocking_stream(settings, callback).unwrap();
 	stream.start().unwrap();
 
-	// loop {
-	// 	// Exit if the stream has ended
-	// 	match complete_rx.try_recv() {
-	// 		Ok(_) => { break; },
-	// 		Err(TryRecvError::Empty) => {}, // Do nothing
-	// 		Err(TryRecvError::Disconnected) => {}, // TODO: Handle
-	// 	}
-
-	// 	// If there has been a time query from the window update, send the current time
-	// 	match tquery_rx.try_recv() {
-	// 		Ok(_) => {
-	// 			tevent_tx.send(curr_time).unwrap();
-	// 		},
-	// 		Err(TryRecvError::Empty) => {}, // Do nothing
-	// 		Err(TryRecvError::Disconnected) => {}, // TODO: Handle
-	// 	}
-	// }
-
-	// We recieved a Complete message in the loop so stop/close the stream
+	// Wait on a Complete message from the callback
 	complete_rx.recv().unwrap();
-	stream.stop().unwrap();
+	
+    // We recieved a Complete message in the loop so stop/close the stream
+    stream.stop().unwrap();
 	stream.close().unwrap();
+
+    // Notify main that playback has ended
+    pdone_tx.send(true).ok();
 }

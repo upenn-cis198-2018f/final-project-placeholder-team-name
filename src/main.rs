@@ -38,13 +38,8 @@ fn main() {
 	// }
 	// return_rms(filename);
 
+	// Preload a vector of frequencies from the track to sync with the audio
 	let peak_data : Vec<f32> = get_peaks(filename);
-
-	// Channel for sending time data
-	let (tevent_tx, tevent_rx) : (Sender<f64>, Receiver<f64>) = mpsc::channel();
-
-	// Channel for sending time requests
-	// let (tquery_tx, tquery_rx) : (Sender<bool>, Receiver<bool>) = mpsc::channel();
 
     let mut events_loop = EventsLoop::new();
     let window = WindowBuilder::new()
@@ -88,24 +83,30 @@ fn main() {
         g_state.setup_opengl();
     }
 
+	// Channel for sending time data
+	let (tevent_tx, tevent_rx) : (Sender<f64>, Receiver<f64>) = mpsc::channel();
+
+	// The playback thread will pass a message on this channel to signify it has closed the stream
+	// and the main thread can cleanup the audio and time threads
+	let (pdone_tx, pdone_rx) : (Sender<bool>, Receiver<bool>) = mpsc::channel();
+    
+	// Spawn a separate thread to stream the audio
+	let song_arg = filename.clone();
+	let audio_thread = thread::spawn(move || {
+		playback(&song_arg, tevent_tx, pdone_tx);
+	});
+
+	// Spawn a separate thread to sync the time and freq data
+	let time_thread = thread::spawn(move || {
+		print_time(tevent_rx, peak_data);
+	});
+
     let program_start = time::Instant::now();
     let mut keep_running = true;
     let mut previous_tick = program_start;
     let frame_period: f64 = 1.0 / 60.0; // in secs
     let frame_duration = time::Duration::from_millis(
         (frame_period * 1000.0) as u64);
-    
-	// Spawn a separate thread to stream the audio
-	let song_arg = filename.clone();
-	let audio_thread = thread::spawn(move || {
-		playback(&song_arg, tevent_tx);
-	});
-
-	let time_thread = thread::spawn(move || {
-		print_time(tevent_rx, peak_data);
-	});
-
-	// TODO: Join threads
 	
 	let mut visualizer = Visualizer::new();
     while keep_running {
@@ -151,6 +152,18 @@ fn main() {
                 println!("Error on swap buffers:\n{:?}", err);
             });
         }
+
+		// Check if audio playback has ended and join the threads and exit if it has
+		match pdone_rx.try_recv() {
+			Err(TryRecvError::Empty) => {}, // Do nothing
+			// If the channel is not empty, it either contains an end message or
+			// has disconnected. Either way, we are done with the graphics.
+			_ => {
+				keep_running = false;
+				audio_thread.join().unwrap();
+				time_thread.join().unwrap();
+			}
+		}
     }
 }
 
@@ -174,9 +187,15 @@ fn handle_event(display: &mut GlWindow, event: Event) -> bool {
     true
 }
 
+// We run this in a separate thread, synchronizing the time data from the playback
+// and the precomputed frequency data. We sychronize the data by mapping each
+// frequency to a 10ms time slice. Theoretically, we would then pass the frequency
+// back in a message to the main function to forward to the graphics.
 fn print_time(tevent_rx: Receiver<f64>, peaks: Vec<f32>) {
 	let mut peaks_iter = peaks.into_iter();
+	// Wait until the playback thread begins streaming time data
 	tevent_rx.recv().unwrap();
+
 	let start_time = time::Instant::now();
 	let inc = time::Duration::from_millis(10 as u64);
 	let mut diff_time = time::Duration::from_millis(0 as u64);
@@ -195,16 +214,7 @@ fn print_time(tevent_rx: Receiver<f64>, peaks: Vec<f32>) {
 		while let Ok(_) = tevent_rx.try_recv() {
 			println!("Time: {:?}", start_time.elapsed());
 		}
-		thread::sleep(time::Duration::from_millis(1));
 
-		elapsed = start_time.elapsed();
-		if (elapsed > diff_time) {
-			curr_peak = match peaks_iter.next() {
-				Some(p) => p,
-				None => break
-			};
-			diff_time = diff_time + inc;
-			println!("Time: {:?}, Peak: {:?}", elapsed, curr_peak);
-		}
+		//thread::sleep(time::Duration::from_millis(1));
 	}
 }
