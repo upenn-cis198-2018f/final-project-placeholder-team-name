@@ -10,6 +10,7 @@ mod audio;
 use audio::*;
 use std::f32::consts::PI;
 use std::i16;
+use std::env;
 
 
 // Writing Sine Wave for testing purposes
@@ -54,16 +55,27 @@ fn write_sin_wav(note: f32) {
 
 
 fn main() {
-		
-	// let music = find_folder::Search::ParentsThenKids(5, 5).for_folder("music").unwrap();
-	// let mut filename = assets.join("music.wav");
 	
-
-	// Testing with sine wave
+	let args: Vec<String> = env::args().collect();
+	if args.len() == 2 {
+		let filename = &args[1];
+		println!("Song choice is: {}", filename);
+		let my_song = &filename;
+		let song: &str = &my_song;
+		if let Some(peak) = find_spectral_peak(song) {
+			println!("Max frequency: {} Hz", song);
+		}
+		return_rms(song);
+		playback(song);
+	} else {
+		println!("Please input one filename in quotation marks.");
+	}
+		
+	/* Testing with sine wave
 	write_sin_wav(450.0);
 	if let Some(peak) = find_spectral_peak("sine.wav") {
 		println!("Max frequency: {} Hz", peak);
 	}
 	return_rms("sine.wav");
-	playback("sine.wav");
+	playback("sine.wav");*/
 }
