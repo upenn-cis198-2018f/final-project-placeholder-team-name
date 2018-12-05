@@ -33,6 +33,33 @@ pub fn find_spectral_peak(filename: &str) -> Option<f32> {
 	}
 }
 
+// FFT function
+pub fn get_peaks(filename: &str) -> Option<f32> {
+	let mut reader = hound::WavReader::open(filename).expect("Failed to open WAV file");
+    let spec = reader.spec();
+
+    let num_samples = (0.02 * spec.sample_rate * spec.channels) as usize;
+	let mut planner = FFTplanner::new(false);
+	let fft = planner.plan_fft(num_samples);
+
+	let mut signal = reader.samples::<i16>().map(|x| Complex::new(x.unwrap() as f32, 0f32)).collect::<Vec<_>>();
+	let mut spectrum = signal.clone();
+
+    let mut start_idx = 0;
+    while (start_idx + num_samples < signal.len()) {
+        let end_idx = start_idx + num_samples;
+        fft.process(&mut signal[start_idx..end_idx], &mut spectrum[start_idx..end_idx]);
+        let max_peak = spectrum.iter().take(num_samples / 2).enumerate().max_by_key(|&(_, freq)| freq.norm() as u32);
+        if let Some((i, _)) = max_peak {
+            let bin = 44100f32 / num_samples as f32;
+            println!("{}", i as f32 * bin);
+        } else {}
+        start_idx = end_idx;
+    }
+
+    None
+}
+
 
 // Possibly useful for analysis, could also be called in buffer
 pub fn return_rms(filename: &str) {

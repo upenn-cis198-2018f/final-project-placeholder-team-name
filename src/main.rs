@@ -38,6 +38,8 @@ fn main() {
 	// }
 	// return_rms(filename);
 
+	get_peaks(filename);
+
 	// Channel for sending time data
 	let (tevent_tx, tevent_rx) : (Sender<f64>, Receiver<f64>) = mpsc::channel();
 
