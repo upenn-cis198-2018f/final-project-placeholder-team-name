@@ -63,7 +63,19 @@ fn main() {
 		// 	println!("Max frequency: {} Hz", peak);
 		// }
 		return_rms(filename);
-		playback(filename);
+
+		// Channel for sending time data
+		let (tevent_tx, tevent_rx) : (Sender<f64>, Receiver<f64>) = mpsc::channel();
+
+		// Channel for sending time requests
+		let (tquery_tx, tquery_rx) : (Sender<bool>, Receiver<bool>) = mpsc::channel();
+
+		// Spawn a separate thread to stream the audio
+		let handle = thread::spawn(move || {
+			playback(filename, tevent_tx, tquery_rx);
+		});
+
+		handle.join().unwrap()
 	} else {
 		println!("Please input one filename in quotation marks.");
 	}

@@ -11,6 +11,9 @@ use std::i16;
 use hound::*;
 use num::complex::Complex;
 use rustfft::FFTplanner;
+use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc;
+use std::thread;
 
 // FFT function
 pub fn find_spectral_peak(filename: &str) -> Option<f32> {
@@ -45,21 +48,21 @@ pub fn return_rms(filename: &str) {
 
 
 // Playback function
-pub fn playback(filename: &str) {
+pub fn playback(filename: &str, tevent_tx: Sender<f64>, tquery_rx: Reciever<bool>) {
 	let reader = hound::WavReader::open(filename).unwrap();
 	let spec = reader.spec();
 	let sample_vec : Vec<i16> = reader.into_samples::<i16>()
 									  .filter_map(Result::ok)
 									  .collect();
 	let mut samples = sample_vec.into_iter();
-		
+
 	let pa = portaudio::PortAudio::new().unwrap();
 	let ch = spec.channels as i32;
 	let sr = spec.sample_rate as f64;
 	let buffer_len = 64;
 	let settings = pa.default_output_stream_settings::<i16>(ch, sr, buffer_len).unwrap();
-		
-	let (complete_tx, complete_rx) = ::std::sync::mpsc::channel();
+
+	let (complete_tx, complete_rx) = mpsc::channel();
 
 	let mut curr_time : f64 = 0.0;
 
@@ -79,7 +82,26 @@ pub fn playback(filename: &str) {
 
 	let mut stream = pa.open_non_blocking_stream(settings, callback).unwrap();
 	stream.start().unwrap();
-	complete_rx.recv().unwrap();
+
+	loop {
+		// Exit if the stream has ended
+		match complete_rx.try_recv() {
+			Ok(_) => { break; },
+			Err(TryRecvError::Empty) => {}, // Do nothing
+			Err(TryRecvError::Disconnected) => {}, // TODO: Handle
+		}
+
+		// If there has been a time query from the window update, send the current time
+		match tquery_rx.try_recv() {
+			Ok(_) => {
+				tevent_tx.send(curr_time).unwrap();
+			},
+			Err(TryRecvError::Empty) => {}, // Do nothing
+			Err(TryRecvError::Disconnected) => {}, // TODO: Handle
+		}
+	}
+
+	// We recieved a Complete message in the loop so stop/close the stream
 	stream.stop().unwrap();
 	stream.close().unwrap();
 }
