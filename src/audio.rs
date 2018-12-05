@@ -38,7 +38,7 @@ pub fn get_peaks(filename: &str) -> Option<f32> {
 	let mut reader = hound::WavReader::open(filename).expect("Failed to open WAV file");
     let spec = reader.spec();
 
-    let num_samples = (0.02 * spec.sample_rate * spec.channels) as usize;
+    let num_samples = ((0.02 as u32) * spec.sample_rate * spec.channels) as usize;
 	let mut planner = FFTplanner::new(false);
 	let fft = planner.plan_fft(num_samples);
 

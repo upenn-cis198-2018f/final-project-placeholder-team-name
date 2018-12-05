@@ -101,9 +101,9 @@ fn main() {
 		playback(&song_arg, tevent_tx);
 	});
 
-	let time_thread = thread::spawn(move || {
-		print_time(tevent_rx);
-	});
+	// let time_thread = thread::spawn(move || {
+	// 	print_time(tevent_rx);
+	// });
 
 	// TODO: Join threads
 	
