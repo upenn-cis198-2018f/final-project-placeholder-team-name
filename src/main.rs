@@ -39,7 +39,7 @@ fn main() {
 	// return_rms(filename);
 
 	// Channel for sending time data
-	// let (tevent_tx, tevent_rx) : (Sender<f64>, Receiver<f64>) = mpsc::channel();
+	let (tevent_tx, tevent_rx) : (Sender<f64>, Receiver<f64>) = mpsc::channel();
 
 	// Channel for sending time requests
 	// let (tquery_tx, tquery_rx) : (Sender<bool>, Receiver<bool>) = mpsc::channel();
