@@ -48,7 +48,7 @@ pub fn return_rms(filename: &str) {
 
 
 // Playback function
-pub fn playback(filename: &str, tevent_tx: Sender<f64>, tquery_rx: Receiver<bool>) {
+pub fn playback(filename: &str, tevent_tx: Sender<f64>) {
 	let reader = hound::WavReader::open(filename).unwrap();
 	let spec = reader.spec();
 	let sample_vec : Vec<i16> = reader.into_samples::<i16>()
@@ -64,10 +64,8 @@ pub fn playback(filename: &str, tevent_tx: Sender<f64>, tquery_rx: Receiver<bool
 
 	let (complete_tx, complete_rx) = mpsc::channel();
 
-	let mut curr_time : f64 = 0.0;
-
 	let callback = move |portaudio::OutputStreamCallbackArgs { buffer, time, .. }| {
-		curr_time = time.current;
+		tevent_tx.send(time.current).ok();
 		for out_sample in buffer {
 			match samples.next() {
 				Some(sample) => *out_sample = sample,
@@ -83,25 +81,26 @@ pub fn playback(filename: &str, tevent_tx: Sender<f64>, tquery_rx: Receiver<bool
 	let mut stream = pa.open_non_blocking_stream(settings, callback).unwrap();
 	stream.start().unwrap();
 
-	loop {
-		// Exit if the stream has ended
-		match complete_rx.try_recv() {
-			Ok(_) => { break; },
-			Err(TryRecvError::Empty) => {}, // Do nothing
-			Err(TryRecvError::Disconnected) => {}, // TODO: Handle
-		}
+	// loop {
+	// 	// Exit if the stream has ended
+	// 	match complete_rx.try_recv() {
+	// 		Ok(_) => { break; },
+	// 		Err(TryRecvError::Empty) => {}, // Do nothing
+	// 		Err(TryRecvError::Disconnected) => {}, // TODO: Handle
+	// 	}
 
-		// If there has been a time query from the window update, send the current time
-		match tquery_rx.try_recv() {
-			Ok(_) => {
-				tevent_tx.send(curr_time).unwrap();
-			},
-			Err(TryRecvError::Empty) => {}, // Do nothing
-			Err(TryRecvError::Disconnected) => {}, // TODO: Handle
-		}
-	}
+	// 	// If there has been a time query from the window update, send the current time
+	// 	match tquery_rx.try_recv() {
+	// 		Ok(_) => {
+	// 			tevent_tx.send(curr_time).unwrap();
+	// 		},
+	// 		Err(TryRecvError::Empty) => {}, // Do nothing
+	// 		Err(TryRecvError::Disconnected) => {}, // TODO: Handle
+	// 	}
+	// }
 
 	// We recieved a Complete message in the loop so stop/close the stream
+	complete_rx.recv().unwrap();
 	stream.stop().unwrap();
 	stream.close().unwrap();
 }

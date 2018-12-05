@@ -76,7 +76,7 @@ fn main() {
 		// Spawn a separate thread to stream the audio
 		let song_arg = filename.clone();
 		let handle = thread::spawn(move || {
-			playback(&song_arg, tevent_tx, tquery_rx);
+			playback(&song_arg, tevent_tx);
 		});
 
 		handle.join().unwrap();
