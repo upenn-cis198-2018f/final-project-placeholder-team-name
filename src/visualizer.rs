@@ -18,12 +18,12 @@ impl Visualizer {
         let mut canvas = Canvas::new();
         
         // TODO: for debugging
-        println!("time (s): {}", time_secs);
+        // println!("time (s): {}", time_secs);
 
         // loops from 0 to 1, then back to 0, and so on
         let anim_factor = map((2f32 * PI * time_secs / 5.0f32).sin(), -1f32, 1f32);
         // loops from 0 to 1, with wraparound
-        let a_p = 3f32;
+        let a_p = 6f32;
         let anim_mod = (time_secs % a_p) / a_p;
 
         // move the camera in a loop around the center
@@ -36,16 +36,23 @@ impl Visualizer {
         let l_pos = 500f32 * vec3(1f32, 1f32, 1f32);
         canvas.set_light_position(l_pos);
 
-        // draw sample cube
+        let red = vec4(0.75f32, 0f32, 0f32, 1f32);
+        let wid = 0.5f32;
         let len = 10f32;
-        canvas.draw_ppiped(
-            vec3(0f32, 0f32, 0f32),
-            vec3(len, 0f32, 0f32),
-            vec3(0f32, len, 0f32),
-            vec3(0f32, 0f32, len),
-            vec4(0.75f32, 0f32, 0f32, 1f32)
-        );
-        
+
+        for i in 0..50 {
+            let test = (i as f32) + (50f32 * anim_mod);
+            let fact = (test % 50f32) * 0.02f32;
+            let height = (lerp(fact, -2f32 * PI, 2f32 * PI).cos() + 1f32);
+            canvas.draw_ppiped(
+                vec3(-25f32 + (i as f32), 0f32, 0f32),
+                vec3(wid, 0f32, 0f32),
+                vec3(0f32, height * 5f32, 0f32),
+                vec3(0f32, 0f32, len),
+                red
+            );
+        }
+
         canvas
     }
 }
