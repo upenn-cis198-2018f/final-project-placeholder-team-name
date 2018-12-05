@@ -151,18 +151,20 @@ fn main() {
             });
         }
 
-		// Check if audio playback has ended and join the threads and exit if it has
+		// Check if audio playback has ended
 		match pdone_rx.try_recv() {
 			Err(TryRecvError::Empty) => {}, // Do nothing
 			// If the channel is not empty, it either contains an end message or
 			// has disconnected. Either way, we are done with the graphics.
 			_ => {
 				keep_running = false;
-				audio_thread.join().unwrap();
-				time_thread.join().unwrap();
 			}
 		}
     }
+	
+	// Cleanup the threads before exiting
+	audio_thread.join().unwrap();
+	time_thread.join().unwrap();
 }
 
 fn handle_event(display: &mut GlWindow, event: Event) -> bool {
@@ -197,12 +199,11 @@ fn print_time(tevent_rx: Receiver<f64>, peaks: Vec<f32>) {
 	let start_time = time::Instant::now();
 	let inc = time::Duration::from_millis(10 as u64);
 	let mut diff_time = time::Duration::from_millis(0 as u64);
-	let mut curr_peak = 0f32;
 
 	loop {
-		let mut elapsed = start_time.elapsed();
+		let elapsed = start_time.elapsed();
 		if elapsed > diff_time {
-			curr_peak = match peaks_iter.next() {
+			let curr_peak = match peaks_iter.next() {
 				Some(p) => p,
 				None => break
 			};
