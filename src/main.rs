@@ -102,7 +102,7 @@ fn main() {
 	});
 
 	let time_thread = thread::spawn(move || {
-		print_time(tevent_rx);
+		print_time(tevent_rx, peak_data);
 	});
 
 	// TODO: Join threads
@@ -178,7 +178,7 @@ fn print_time(tevent_rx: Receiver<f64>, peaks: Vec<f32>) {
 	let peaks_iter = peaks.into_iter();
 	tevent_rx.recv().unwrap();
 	let start_time = time::Instant::now();
-	let inc = time::Duration::from_millis(10.0)
+	let inc = time::Duration::from_millis(10.0);
 	let mut diff_time = time::Duration::from_millis(0.0);
 	let mut curr_peak = 0.0;
 
