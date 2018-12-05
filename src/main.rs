@@ -83,7 +83,7 @@ fn main() {
 			print_time(tevent_rx);
 		});
 
-		time_thread.join().unwrap()
+		time_thread.join().unwrap();
 		audio_thread.join().unwrap();
 	} else {
 		println!("Please input one filename in quotation marks.");
@@ -91,9 +91,9 @@ fn main() {
 }
 
 fn print_time(tevent_rx: Receiver<f64>) {
-	while let Err(mpsc::TryRecvError::Empty) = tevent_rx.try_recv() {}
-
-	while let Ok(count_down) = tevent_rx.try_recv() {
-        println!("count_down: {:?}", count_down);
-    }
+	loop {
+		while let Ok(count_down) = tevent_rx.try_recv() {
+			println!("count_down: {:?}", count_down);
+		}
+	}
 }
