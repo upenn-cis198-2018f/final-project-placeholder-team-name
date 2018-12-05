@@ -99,6 +99,6 @@ fn print_time(tevent_rx: Receiver<f64>) {
 		while let Ok(_) = tevent_rx.try_recv() {
 			println!("count_down: {:?}", start_time.elapsed());
 		}
-		thread::sleep(time::Duration::from_millis(10));
+		thread::sleep(time::Duration::from_millis(1));
 	}
 }

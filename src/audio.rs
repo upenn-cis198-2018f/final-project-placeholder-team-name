@@ -64,16 +64,7 @@ pub fn playback(filename: &str, tevent_tx: Sender<f64>) {
 
 	let (complete_tx, complete_rx) = mpsc::channel();
 
-	// let mut count_down = 5.0;
-	// let mut maybe_last_time = None;
-
 	let callback = move |portaudio::OutputStreamCallbackArgs { buffer, time, .. }| {
-		// let current_time = time.buffer_dac;
-        // let prev_time = maybe_last_time.unwrap_or(current_time);
-        // let dt = current_time - prev_time;
-        // count_down -= dt;
-        // maybe_last_time = Some(current_time);
-		
 		tevent_tx.send(time.current).ok();
 
 		for out_sample in buffer {
