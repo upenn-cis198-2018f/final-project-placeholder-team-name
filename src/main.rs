@@ -1,15 +1,29 @@
 extern crate glutin;
 extern crate gl;
 extern crate cgmath;
+extern crate hound;
+extern crate num;
+extern crate rustfft;
+extern crate find_folder;
+extern crate portaudio;
+extern crate sample;
 
 mod graphics;
 mod visualizer;
+mod audio;
 
 use visualizer::*;
 use graphics::*;
 use glutin::*;
 use std::time;
 use std::process;
+use audio::*;
+use std::f32::consts::PI;
+use std::i16;
+use std::env;
+use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc;
+use std::thread;
 
 fn main() {
 	let args: Vec<String> = env::args().collect();
