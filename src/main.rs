@@ -175,18 +175,18 @@ fn handle_event(display: &mut GlWindow, event: Event) -> bool {
 }
 
 fn print_time(tevent_rx: Receiver<f64>, peaks: Vec<f32>) {
-	let peaks_iter = peaks.into_iter();
+	let peaks_iter = peaks.iter();
 	tevent_rx.recv().unwrap();
 	let start_time = time::Instant::now();
-	let inc = time::Duration::from_millis(10.0);
-	let mut diff_time = time::Duration::from_millis(0.0);
+	let inc = time::Duration::from_millis(10 as u64);
+	let mut diff_time = time::Duration::from_millis(0 as u64);
 	let mut curr_peak = 0.0;
 
 	loop {
 		if (start_time.elapsed() > diff_time) {
 			curr_peak = peaks_iter.next();
 			diff_time = diff_time + inc;
-			println("Time: {:?}, Peak: {:?}", start_time.elapsed(), curr_peak);
+			println!("Time: {:?}, Peak: {:?}", start_time.elapsed(), curr_peak);
 		}
 		while let Ok(_) = tevent_rx.try_recv() {
 			println!("count_down: {:?}", start_time.elapsed());
