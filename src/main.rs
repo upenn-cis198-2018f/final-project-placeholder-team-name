@@ -183,18 +183,28 @@ fn print_time(tevent_rx: Receiver<f64>, peaks: Vec<f32>) {
 	let mut curr_peak = 0f32;
 
 	loop {
-		if (start_time.elapsed() > diff_time) {
+		let mut elapsed = start_time.elapsed();
+		if (elapsed > diff_time) {
 			curr_peak = match peaks_iter.next() {
 				Some(p) => p,
-				None => 0f32
+				None => break
 			};
 			diff_time = diff_time + inc;
-			println!("Time: {:?}, Peak: {:?}", start_time.elapsed(), curr_peak);
-			println!("Diff Time: {:?}", diff_time);
+			println!("Time: {:?}, Peak: {:?}", elapsed, curr_peak);
 		}
 		while let Ok(_) = tevent_rx.try_recv() {
 			println!("Time: {:?}", start_time.elapsed());
 		}
 		thread::sleep(time::Duration::from_millis(1));
+
+		elapsed = start_time.elapsed();
+		if (elapsed > diff_time) {
+			curr_peak = match peaks_iter.next() {
+				Some(p) => p,
+				None => break
+			};
+			diff_time = diff_time + inc;
+			println!("Time: {:?}, Peak: {:?}", elapsed, curr_peak);
+		}
 	}
 }
