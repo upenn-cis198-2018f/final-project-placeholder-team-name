@@ -18,7 +18,7 @@ impl Visualizer {
         let mut canvas = Canvas::new();
         
         // TODO: for debugging
-        println!("time (s): {}", time_secs);
+        // println!("time (s): {}", time_secs);
 
         // loops from 0 to 1, then back to 0, and so on
         let anim_factor = map((2f32 * PI * time_secs / 5.0f32).sin(), -1f32, 1f32);
