@@ -48,7 +48,8 @@ pub fn return_rms(filename: &str) {
 pub fn playback(filename: &str) {
 	let reader = hound::WavReader::open(filename).unwrap();
 	let spec = reader.spec();
-	let mut samples = reader.into_samples::<i16>().filter_map(Result::ok);
+	let sample_vec = reader.into_samples::<i16>().filter_map(Result::ok).collect();
+	let mut samples = sample_vec.into_iter();
 		
 	let pa = portaudio::PortAudio::new().unwrap();
 	let ch = spec.channels as i32;
@@ -74,14 +75,9 @@ pub fn playback(filename: &str) {
 		portaudio::Continue
 	};
 
-
 	let mut stream = pa.open_non_blocking_stream(settings, callback).unwrap();
 	stream.start().unwrap();
 	complete_rx.recv().unwrap();
 	stream.stop().unwrap();
 	stream.close().unwrap();
 }
-	
-
-
-
