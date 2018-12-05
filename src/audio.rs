@@ -34,11 +34,12 @@ pub fn find_spectral_peak(filename: &str) -> Option<f32> {
 }
 
 // FFT function
-pub fn get_peaks(filename: &str) -> Option<f32> {
+pub fn get_peaks(filename: &str) -> Vec<f32> {
+    let mut peaks : Vec<f32> = Vec::new();
 	let mut reader = hound::WavReader::open(filename).expect("Failed to open WAV file");
     let spec = reader.spec();
 
-    let num_samples = (spec.sample_rate / 25) as usize;
+    let num_samples = (spec.sample_rate / 50) as usize;
 	let mut planner = FFTplanner::new(false);
 	let fft = planner.plan_fft(num_samples);
 
@@ -54,22 +55,14 @@ pub fn get_peaks(filename: &str) -> Option<f32> {
         let max_peak = spectrum[start_idx..end_idx].iter().take(num_samples / 2).enumerate().max_by_key(|&(_, freq)| freq.norm() as u32);
         if let Some((i, _)) = max_peak {
             let bin = 44100f32 / num_samples as f32;
-            println!("{}", i as f32 * bin);
+            peaks.push(i as f32 * bin);
         } else {
-            println!("No peak");
+            peaks.push(0f32);
         }
         start_idx = end_idx;
     }
 
-    // fft.process(&mut signal[0..num_samples], &mut spectrum[0..num_samples]);
-    // let max_peak = spectrum.iter().take(num_samples / 2).enumerate().max_by_key(|&(_, freq)| freq.norm() as u32);
-    // println!("{:?}", max_peak)
-    // if let Some((i, _)) = max_peak {
-    //     let bin = 44100f32 / num_samples as f32;
-    //     println!("FFT: {}", i as f32 * bin);
-    // }
-
-    None
+    peaks
 }
 
 

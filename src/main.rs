@@ -38,7 +38,7 @@ fn main() {
 	// }
 	// return_rms(filename);
 
-	get_peaks(filename);
+	let peak_data : Vec<f32> = get_peaks(filename);
 
 	// Channel for sending time data
 	let (tevent_tx, tevent_rx) : (Sender<f64>, Receiver<f64>) = mpsc::channel();
@@ -101,9 +101,9 @@ fn main() {
 		playback(&song_arg, tevent_tx);
 	});
 
-	// let time_thread = thread::spawn(move || {
-	// 	print_time(tevent_rx);
-	// });
+	let time_thread = thread::spawn(move || {
+		print_time(tevent_rx);
+	});
 
 	// TODO: Join threads
 	
@@ -174,11 +174,20 @@ fn handle_event(display: &mut GlWindow, event: Event) -> bool {
     true
 }
 
-fn print_time(tevent_rx: Receiver<f64>) {
+fn print_time(tevent_rx: Receiver<f64>, peaks: Vec<f32>) {
+	let peaks_iter = peaks.into_iter();
 	tevent_rx.recv().unwrap();
 	let start_time = time::Instant::now();
+	let inc = time::Duration::from_millis(10.0)
+	let mut diff_time = time::Duration::from_millis(0.0);
+	let mut curr_peak = 0.0;
 
 	loop {
+		if (start_time.elapsed() > diff_time) {
+			curr_peak = peaks_iter.next();
+			diff_time = diff_time + inc;
+			println("Time: {:?}, Peak: {:?}", start_time.elapsed(), curr_peak);
+		}
 		while let Ok(_) = tevent_rx.try_recv() {
 			println!("count_down: {:?}", start_time.elapsed());
 		}
