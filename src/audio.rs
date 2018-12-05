@@ -55,7 +55,7 @@ pub fn playback(filename: &str) {
 	let pa = portaudio::PortAudio::new().unwrap();
 	let ch = spec.channels as i32;
 	let sr = spec.sample_rate as f64;
-	let buffer_len = 0;
+	let buffer_len = 64;
 	let settings = pa.default_output_stream_settings::<i16>(ch, sr, buffer_len).unwrap();
 		
 	let (complete_tx, complete_rx) = ::std::sync::mpsc::channel();
@@ -63,7 +63,6 @@ pub fn playback(filename: &str) {
 	let callback = move |portaudio::OutputStreamCallbackArgs { buffer, .. }| {
 		let buffer: &mut [[i16; 2]] = buffer.to_frame_slice_mut().unwrap();
 		for out_frame in buffer {
-		// Compute spectral peak here?
 			match frames.next() {
 				Some(frame) => *out_frame = frame,
 				None => {
@@ -79,6 +78,9 @@ pub fn playback(filename: &str) {
 	let mut stream = pa.open_non_blocking_stream(settings, callback).unwrap();
 	stream.start().unwrap();
 	complete_rx.recv().unwrap();
+	while let Ok(true) = stream.is_active() {
+		thread::sleep(Duration::from_millis(16));
+	}
 	stream.stop().unwrap();
 	stream.close().unwrap();
 }
