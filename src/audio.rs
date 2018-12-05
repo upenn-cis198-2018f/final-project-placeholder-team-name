@@ -48,7 +48,7 @@ pub fn return_rms(filename: &str) {
 
 
 // Playback function
-pub fn playback(filename: &str, tevent_tx: Sender<f64>, tquery_rx: Reciever<bool>) {
+pub fn playback(filename: &str, tevent_tx: Sender<f64>, tquery_rx: Receiver<bool>) {
 	let reader = hound::WavReader::open(filename).unwrap();
 	let spec = reader.spec();
 	let sample_vec : Vec<i16> = reader.into_samples::<i16>()
