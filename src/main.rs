@@ -55,27 +55,16 @@ fn write_sin_wav(note: f32) {
 
 
 fn main() {
-	
 	let args: Vec<String> = env::args().collect();
 	if args.len() == 2 {
 		let filename = &args[1];
 		println!("Song choice is: {}", filename);
-		let my_song = &filename;
-		let song: &str = &my_song;
-		if let Some(peak) = find_spectral_peak(song) {
-			println!("Max frequency: {} Hz", song);
+		if let Some(peak) = find_spectral_peak(filename) {
+			println!("Max frequency: {} Hz", filename);
 		}
-		return_rms(song);
-		playback(song);
+		return_rms(filename);
+		playback(filename);
 	} else {
 		println!("Please input one filename in quotation marks.");
 	}
-		
-	/* Testing with sine wave
-	write_sin_wav(450.0);
-	if let Some(peak) = find_spectral_peak("sine.wav") {
-		println!("Max frequency: {} Hz", peak);
-	}
-	return_rms("sine.wav");
-	playback("sine.wav");*/
 }

@@ -14,8 +14,7 @@ use rustfft::FFTplanner;
 
 // FFT function
 pub fn find_spectral_peak(filename: &str) -> Option<f32> {
-	let mut reader = hound::WavReader::open(filename).expect("Failed to 
-open WAV file");
+	let mut reader = hound::WavReader::open(filename).expect("Failed to open WAV file");
 	let num_samples = reader.len() as usize;
 	let mut planner = FFTplanner::new(false);
 	let fft = planner.plan_fft(num_samples);
@@ -78,9 +77,6 @@ pub fn playback(filename: &str) {
 	let mut stream = pa.open_non_blocking_stream(settings, callback).unwrap();
 	stream.start().unwrap();
 	complete_rx.recv().unwrap();
-	while let Ok(true) = stream.is_active() {
-		thread::sleep(Duration::from_millis(16));
-	}
 	stream.stop().unwrap();
 	stream.close().unwrap();
 }
