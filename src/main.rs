@@ -184,7 +184,10 @@ fn print_time(tevent_rx: Receiver<f64>, peaks: Vec<f32>) {
 
 	loop {
 		if (start_time.elapsed() > diff_time) {
-			curr_peak = peaks_iter.next();
+			match peaks_iter.next() {
+				Some(p) => p,
+				None => 0.0
+			}
 			diff_time = diff_time + inc;
 			println!("Time: {:?}, Peak: {:?}", start_time.elapsed(), curr_peak);
 		}
