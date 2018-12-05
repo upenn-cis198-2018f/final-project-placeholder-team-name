@@ -14,6 +14,7 @@ use std::env;
 use std::sync::mpsc::{Sender, Receiver};
 use std::sync::mpsc;
 use std::thread;
+use std::time;
 
 
 // Writing Sine Wave for testing purposes
@@ -95,5 +96,6 @@ fn print_time(tevent_rx: Receiver<f64>) {
 		while let Ok(count_down) = tevent_rx.try_recv() {
 			println!("count_down: {:?}", count_down);
 		}
+		thread::sleep(time::Duration::from_millis(15));
 	}
 }
