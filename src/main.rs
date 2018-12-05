@@ -214,6 +214,6 @@ fn print_time(tevent_rx: Receiver<f64>, peaks: Vec<f32>) {
 			println!("Time: {:?}", start_time.elapsed());
 		}
 
-		//thread::sleep(time::Duration::from_millis(1));
+		thread::sleep(time::Duration::from_millis(1));
 	}
 }
