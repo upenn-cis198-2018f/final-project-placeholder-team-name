@@ -125,3 +125,50 @@ fn handle_event(display: &mut GlWindow, event: Event) -> bool {
     };
     true
 }
+
+/*
+fn main() {
+	let args: Vec<String> = env::args().collect();
+	if args.len() == 2 {
+		let filename = &args[1];
+		println!("Song choice is: {}", filename);
+		// if let Some(peak) = find_spectral_peak(filename) {
+		// 	println!("Max frequency: {} Hz", peak);
+		// }
+		return_rms(filename);
+
+		// Channel for sending time data
+		let (tevent_tx, tevent_rx) : (Sender<f64>, Receiver<f64>) = mpsc::channel();
+
+		// Channel for sending time requests
+		let (tquery_tx, tquery_rx) : (Sender<bool>, Receiver<bool>) = mpsc::channel();
+
+		// Spawn a separate thread to stream the audio
+		let song_arg = filename.clone();
+		let audio_thread = thread::spawn(move || {
+			playback(&song_arg, tevent_tx);
+		});
+
+		let time_thread = thread::spawn(move || {
+			print_time(tevent_rx);
+		});
+
+		time_thread.join().unwrap();
+		audio_thread.join().unwrap();
+	} else {
+		println!("Please input one filename in quotation marks.");
+	}
+}
+
+fn print_time(tevent_rx: Receiver<f64>) {
+	tevent_rx.recv().unwrap();
+	let start_time = time::Instant::now();
+
+	loop {
+		while let Ok(_) = tevent_rx.try_recv() {
+			println!("count_down: {:?}", start_time.elapsed());
+		}
+		thread::sleep(time::Duration::from_millis(1));
+	}
+}
+*/
