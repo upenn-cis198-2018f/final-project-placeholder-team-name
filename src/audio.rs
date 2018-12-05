@@ -1,9 +1,7 @@
 extern crate hound;
 extern crate num;
 extern crate rustfft;
-extern crate find_folder;
 extern crate portaudio;
-extern crate sample;
 
 use std::i16;
 use hound::*;

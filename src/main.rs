@@ -4,9 +4,7 @@ extern crate cgmath;
 extern crate hound;
 extern crate num;
 extern crate rustfft;
-extern crate find_folder;
 extern crate portaudio;
-extern crate sample;
 
 mod graphics;
 mod visualizer;
@@ -34,7 +32,7 @@ fn main() {
 	// if let Some(peak) = find_spectral_peak(filename) {
 	// 	println!("Max frequency: {} Hz", peak);
 	// }
-	// return_rms(filename);
+	return_rms(filename);
 
 	// Preload a vector of frequencies from the track to sync with the audio
 	let peak_data : Vec<f32> = get_peaks(filename);
