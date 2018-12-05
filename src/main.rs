@@ -18,10 +18,8 @@ use glutin::*;
 use std::time;
 use std::process;
 use audio::*;
-use std::f32::consts::PI;
-use std::i16;
 use std::env;
-use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc::{Sender, Receiver, TryRecvError};
 use std::sync::mpsc;
 use std::thread;
 
@@ -203,7 +201,7 @@ fn print_time(tevent_rx: Receiver<f64>, peaks: Vec<f32>) {
 
 	loop {
 		let mut elapsed = start_time.elapsed();
-		if (elapsed > diff_time) {
+		if elapsed > diff_time {
 			curr_peak = match peaks_iter.next() {
 				Some(p) => p,
 				None => break

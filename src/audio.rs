@@ -5,14 +5,12 @@ extern crate find_folder;
 extern crate portaudio;
 extern crate sample;
 
-use sample::{signal, Signal, ToFrameSliceMut};
 use std::i16;
 use hound::*;
 use num::complex::Complex;
 use rustfft::FFTplanner;
-use std::sync::mpsc::{Sender, Receiver, TryRecvError};
+use std::sync::mpsc::Sender;
 use std::sync::mpsc;
-use std::thread;
 
 // FFT function
 pub fn find_spectral_peak(filename: &str) -> Option<f32> {
@@ -49,7 +47,7 @@ pub fn get_peaks(filename: &str) -> Vec<f32> {
     println!("Audio samples loaded");
 
     let mut start_idx = 0;
-    while (start_idx + num_samples < signal.len()) {
+    while start_idx + num_samples < signal.len() {
         let end_idx = start_idx + num_samples;
         fft.process(&mut signal[start_idx..end_idx], &mut spectrum[start_idx..end_idx]);
         let max_peak = spectrum[start_idx..end_idx].iter().take(num_samples / 2).enumerate().max_by_key(|&(_, freq)| freq.norm() as u32);
