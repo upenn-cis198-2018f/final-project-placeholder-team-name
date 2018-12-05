@@ -11,6 +11,9 @@ use audio::*;
 use std::f32::consts::PI;
 use std::i16;
 use std::env;
+use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc;
+use std::thread;
 
 
 // Writing Sine Wave for testing purposes

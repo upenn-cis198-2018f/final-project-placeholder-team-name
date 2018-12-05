@@ -11,7 +11,7 @@ use std::i16;
 use hound::*;
 use num::complex::Complex;
 use rustfft::FFTplanner;
-use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc::{Sender, Receiver, TryRecvError};
 use std::sync::mpsc;
 use std::thread;
 
